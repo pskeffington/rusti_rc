@@ -79,8 +79,10 @@ def load_catalog(root):
         seen_ids.add(mid)
         seen_prefixes.add(prefix)
         for key in ("kind", "maturity", "summary", "trust_boundary"):
-            if not isinstance(module[key], str) or not 1 <= len(module[key]) <= 300:
-                raise IndexProblem("invalid module " + key)
+            value = module[key]
+            if (not isinstance(value, str) or not 1 <= len(value) <= 300
+                    or any(char in value for char in "\r\n<>|")):
+                raise IndexProblem("invalid or unsafe module " + key)
         for key in ("entrypoints", "docs", "topics"):
             values = module[key]
             if not isinstance(values, list) or not values or any(
@@ -112,7 +114,9 @@ def load_catalog(root):
             for t in terms
         ) or len(terms) != len(set(terms)):
             raise IndexProblem("invalid route terms")
-        if not isinstance(related, list) or len(related) != len(set(related)):
+        if (not isinstance(related, list) or
+                any(not isinstance(path, str) for path in related) or
+                len(related) != len(set(related))):
             raise IndexProblem("invalid route related paths")
         for path in [route["primary"]] + related:
             safe_path(path)
@@ -172,7 +176,7 @@ def assemble(root, catalog, paths):
     for path in paths:
         safe_path(path)
         if path == MACHINE:
-            continue   # index cannot contain itself as a source document
+            continue   # Add one stable self-reference below; never parse its content.
         if path not in ROOT_FILES and PurePosixPath(path).suffix.lower() not in EXTENSIONS:
             raise IndexProblem("unclassified tracked path: " + path)
         item = root / path
@@ -187,8 +191,11 @@ def assemble(root, catalog, paths):
     if DOCS not in paths:
         files.append({"path": DOCS, "module": module_for(DOCS, catalog["modules"]),
                       "kind": "documentation", "title": "Repository navigation"})
+    # Keep the machine inventory complete without recursively reading itself.
+    files.append({"path": MACHINE, "module": module_for(MACHINE, catalog["modules"]),
+                  "kind": "generated-index"})
     files.sort(key=lambda e: e["path"])
-    known = {f["path"] for f in files} | {MACHINE}
+    known = {f["path"] for f in files}
     for module in catalog["modules"]:
         for path in module["entrypoints"] + module["docs"]:
             if path not in known:
@@ -209,7 +216,7 @@ def assemble(root, catalog, paths):
         "generator": "scripts/repo_index.py",
         "counts": {
             "modules": len(modules), "routes": len(catalog["routes"]),
-            "files": len(files) + 1,
+            "files": len(files),
             "documents": sum(f["kind"] == "documentation" for f in files),
         },
         "modules": modules,
@@ -268,7 +275,8 @@ def docs_text(index):
                   "From the repository root:", "",
                   "    python3 scripts/repo_index.py --write",
                   "    python3 scripts/repo_index.py --check",
-                  "    python3 scripts/repo_index.py --query 'SASL authentication'", "",
+                  "    python3 scripts/repo_index.py --query 'SASL authentication'",
+                  "    python3 scripts/repo_index.py --path net/src/sasl.rs", "",
                   "CI rejects stale output, missing links in curated routes, "
                   "unindexed directories, and sensitive file extensions. "
                   "The index is a navigation aid, never a security approval.", ""])
@@ -284,13 +292,19 @@ def generate(root):
 
 
 def search(index, text):
-    tokens = set(re.findall(r"[a-z0-9]+", text.casefold()))
+    """Rank curated routes only; never execute or interpret indexed content."""
+    query = text.strip().casefold()
+    tokens = set(re.findall(r"[a-z0-9]+", query))
+    if not tokens:
+        return []
     result = []
     for route in index["routes"]:
         words = route["id"].replace("-", " ") + " " + " ".join(route["terms"])
         matches = len(tokens & set(re.findall(r"[a-z0-9]+", words.casefold())))
         if matches:
-            result.append({"route": route["id"], "score": matches,
+            exact = any(query == term for term in route["terms"])
+            score = matches * 2 + (5 if exact else 0)
+            result.append({"route": route["id"], "score": score,
                            "primary": route["primary"], "related": route["related"]})
     return sorted(result, key=lambda v: (-v["score"], v["route"]))[:10]
 
@@ -300,12 +314,26 @@ def main(argv=None):
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--write", action="store_true")
-    mode.add_argument("--query")
+    mode.add_argument("--query", metavar="TEXT")
+    mode.add_argument("--path", metavar="REPO_PATH",
+                      help="Inspect an exact indexed path and its module ownership")
     args = parser.parse_args(argv)
     try:
         files, index = generate(ROOT)
         if args.query is not None:
             print(json.dumps({"query": args.query, "matches": search(index, args.query)}, indent=2))
+        elif args.path is not None:
+            safe_path(args.path)
+            found = next((f for f in index["files"] if f["path"] == args.path), None)
+            if found is None:
+                raise IndexProblem("path is not in the tracked machine index")
+            owner = next(m for m in index["modules"] if m["id"] == found["module"])
+            print(json.dumps({"file": found, "owner": {
+                "id": owner["id"], "kind": owner["kind"],
+                "maturity": owner["maturity"],
+                "trust_boundary": owner["trust_boundary"],
+                "entrypoints": owner["entrypoints"]
+            }}, indent=2))
         elif args.check:
             drift = [path for path, content in files.items()
                      if not (ROOT / path).is_file() or
