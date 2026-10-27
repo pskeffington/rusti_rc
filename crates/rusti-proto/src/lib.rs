@@ -1,8 +1,10 @@
-//! Limited, dependency-free IRC wire framing.
+//! Dependency-free IRC wire protocol and bounded IRCv3 state machines.
 //!
-//! No sockets, credential handling, rendering, or trusted commands.
-//! G1b preview only: bounded framing, opaque IRCv3 tags, limited CAP 302.
-//! Complete RFC numerics, full IRCv3 and authenticated transport remain pending.
+//! Includes strict framing, tags, CAP 302 negotiation, and opt-in SASL PLAIN
+//! negotiation logic. This portable Rust 1.70 crate has no sockets, secrets,
+//! certificate validation, persistence, or Rust Boy organizational authority.
+//! Live TLS transport and protected credentials reside in the separate
+//! `net/` workspace. This is a deliberately limited IRC/IRCv3 subset.
 #![forbid(unsafe_code)]
 
 pub mod cap;
