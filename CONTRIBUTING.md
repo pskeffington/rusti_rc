@@ -7,13 +7,13 @@ Contributions are welcome as focused, reviewable modules, but **no feature is ap
 1. Keep all `crates/rusti-*` modules dependency-light, default inactive, `#![forbid(unsafe_code)]`, and Rust 2021-compatible; current MSRV target is 1.70. Any MSRV increase requires a documented compatibility assessment.
 2. Every parser, transport, certificate, key-store, listener, or installer change needs its own threat model and negative tests. Include malformed, oversized, unsafe, disconnected, old-system and rollback cases as appropriate.
 3. Keep untrusted IRC fields separate from Rust Boy identities. Do not link nickname/account/channel to Vault Command, tasks, jobs, assignments or peer trust.
-4. Do not copy code from other IRC projects without recording the exact commit, license, attribution, and compatibility with the repository's eventual license choice.
+4. Do not copy code from other IRC projects without recording the exact commit, license, attribution, and compatibility with this repository's MIT license.
 5. No new network I/O, background polling, public bind, credentials, DCC, file upload or auto-discovery in a crate initializer. Explicit operator opt-in remains mandatory.
 6. Do not weaken TLS/certificate validation for old machines. Use a separately reviewed, isolated gateway if a device cannot meet security requirements.
 7. Add unit/property/fuzz tests and reproducible toolchain/per-target evidence; runtime hardware claims must show real measurements and device model/OS/ABI.
 8. Keep release bundle signatures, trust-root provisioning, metadata expiry, version floors, backup, migration and rollback independently reviewed. Do not add an unsigned 'emergency' shortcut.
 9. Keep tests and fixtures synthetic. No operator journals, location records, user credentials, PHI, tokens or host keys committed or printed.
-10. Until a license is selected, avoid publishing crates or redistributing derived binaries.
+10. MIT licensing is now documented in [LICENSE](LICENSE). Keep `publish = false` until API, CI, security, dependency provenance, and release controls have been reviewed. A license is not a release approval.
 
 ## Development smoke
 
