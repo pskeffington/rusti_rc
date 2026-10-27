@@ -341,7 +341,7 @@ def main(argv=None):
             for path, content in files.items():
                 dst = ROOT / path
                 dst.parent.mkdir(parents=True, exist_ok=True)
-                dst.write_text(content, encoding="utf-8", newline="\n")
+                dst.write_text(content, encoding="utf-8")
             print("machine_index=written files=" + str(index["counts"]["files"]))
         return 0
     except (IndexProblem, OSError, ValueError, json.JSONDecodeError) as exc:
