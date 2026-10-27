@@ -1,8 +1,13 @@
 //! Limited, dependency-free IRC wire framing.
 //!
 //! No sockets, credential handling, rendering, or trusted commands.
-//! G1 preview only: does not implement full RFC/IRCv3 state or tag semantics.
+//! G1b preview only: bounded framing, opaque IRCv3 tags, limited CAP 302.
+//! Complete RFC numerics, full IRCv3 and authenticated transport remain pending.
 #![forbid(unsafe_code)]
+
+pub mod cap;
+pub mod decoder;
+pub mod tags;
 
 /// RFC 1459 / RFC 2812 line ceiling, including CRLF.
 pub const MAX_BASE_BYTES: usize = 512;
@@ -24,6 +29,8 @@ pub enum FrameError {
     TooManyParameters,
     InvalidTarget,
     EmptyText,
+    InvalidUtf8,
+    TruncatedFrame,
 }
 
 /// Borrowed protocol fields. An IRC prefix/nickname is NOT an authenticated
@@ -40,6 +47,12 @@ pub struct ParsedMessage<'a> {
 impl<'a> ParsedMessage<'a> {
     pub fn params(&self) -> &[&'a str] {
         &self.params[..self.param_count]
+    }
+
+    /// Returns the last raw IRCv3 tag matching a case-sensitive key.
+    /// This is untrusted metadata, never an authentication assertion.
+    pub fn tag(&self, key: &str) -> Option<tags::RawTag<'a>> {
+        self.tags.and_then(|raw| tags::last_tag(raw, key))
     }
 }
 
@@ -65,8 +78,8 @@ fn split_token(s: &str) -> (&str, &str) {
 /// Parse one complete CRLF-terminated UTF-8 IRC line, enforcing byte limits.
 ///
 /// This intentionally rejects CTCP control bytes and Unicode bidi controls.
-/// It supports *opaque* IRCv3 tag prefixes but does not interpret tag values,
-/// negotiate capabilities, or grant identity trust to any field.
+/// It supports opaque IRCv3 tag prefixes. Tag unescaping and limited CAP 302
+/// planning live in separate pure-data modules; no protocol field grants trust.
 pub fn parse_frame(frame: &str) -> Result<ParsedMessage<'_>, FrameError> {
     if !frame.ends_with("\r\n") {
         return Err(FrameError::MissingCrlf);
