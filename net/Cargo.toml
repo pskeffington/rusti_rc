@@ -16,6 +16,7 @@ rusti-client = { path = "../crates/rusti-client" }
 rusti-proto = { path = "../crates/rusti-proto" }
 rustls = { version = "=0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
 webpki-roots = "=1.0.9"
+zeroize = "=1.9.1"
 
 [dev-dependencies]
 rcgen = { version = "=0.14.10", default-features = false, features = ["ring"] }
