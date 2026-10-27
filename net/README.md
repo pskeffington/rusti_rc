@@ -30,6 +30,8 @@ Do not use the current transport for clinical records, safety-of-life messaging,
 
 ## Next gates
 
+- [G2e independent Ergo SASL test suite](tests/ergo_sasl.rs) and [throwaway registered-account bootstrap](tests/bootstrap_ergo_account.py) are isolated to a localhost-only CI job. A passing test proves a real third-party IRCd account flow, NOT protected OS credentials.
+- [Ignored manual native Keychain/Credential Manager lifecycle test](tests/native_keyring_lifecycle.rs) covers synthetic provisioning/rotation/revocation with explicit local permission and is never automatically executed in CI. See [G2e architecture](../docs/architecture/G2E_INDEPENDENT_SASL_LEGACY_KEYS.md).
 - Broader IRC registration and capability edge cases across a second independent IRCd. [Ergo interoperability](../.github/workflows/ergo-interop.yml) has already passed using a digest-pinned server image.
 - Test actual native macOS/Windows secret provisioning, retrieval, rotation and denial; separately validate SASL account login/failure against independent IRCd. G2d only exercises synthetic account credentials.
 - Security and license audit, vulnerabilities/SBOM, and hardening against slow peers and reconnect floods. Cargo.lock is already pinned.

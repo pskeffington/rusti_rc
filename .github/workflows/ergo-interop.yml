@@ -45,6 +45,7 @@ jobs:
           lab_dir="$(mktemp -d "${RUNNER_TEMP}/rusti-ergo-XXXXXX")"
           echo "RUSTI_ERGO_LAB_DIR=${lab_dir}" >> "${GITHUB_ENV}"
           echo "RUSTI_ERGO_CA_DER=${lab_dir}/ca.der" >> "${GITHUB_ENV}"
+          echo "RUSTI_ERGO_CA_PEM=${lab_dir}/ca.pem" >> "${GITHUB_ENV}"
           echo "RUSTI_ERGO_ADDR=127.0.0.1:16697" >> "${GITHUB_ENV}"
           openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 2             -keyout "${lab_dir}/ca.key" -out "${lab_dir}/ca.pem"             -subj "/CN=rusti-test-root.invalid"             -addext "basicConstraints=critical,CA:TRUE"             -addext "keyUsage=critical,keyCertSign,cRLSign"
           openssl req -new -newkey rsa:2048 -nodes -sha256             -keyout "${lab_dir}/leaf.key" -out "${lab_dir}/leaf.csr"             -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost"
@@ -91,6 +92,18 @@ jobs:
         shell: bash
         run: |
           cargo +stable test --manifest-path net/Cargo.toml --locked             --test ergo_interop -- --ignored --nocapture
+
+      - name: Bootstrap disposable independent IRC account over verified TLS
+        shell: bash
+        run: |
+          # Test fixture is intentionally public; no production user secrets.
+          python3 net/tests/bootstrap_ergo_account.py
+
+      - name: Verify independent SASL account authentication and rejection
+        shell: bash
+        run: |
+          cargo +stable test --manifest-path net/Cargo.toml --locked \
+            --test ergo_sasl -- --ignored --nocapture
 
       - name: Delete throwaway daemon, CA and client credentials
         if: always()

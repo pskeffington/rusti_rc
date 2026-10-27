@@ -20,7 +20,7 @@ use rusti_client::{ClientConfig, ClientError};
 use rusti_proto::decoder::FrameDecoder;
 use rusti_proto::{cap::CAP_LS_302, encode_privmsg, FrameError, ParsedMessage};
 use rusti_proto::registration::{RegistrationError, RegistrationFlow};
-use rusti_proto::sasl::SaslError;
+use rusti_proto::sasl::{SaslError, SaslStage};
 use rustls::pki_types::ServerName;
 use rustls::{ClientConnection, RootCertStore, StreamOwned};
 
@@ -46,6 +46,8 @@ pub enum TransportError {
     RegistrationResponseOverflow,
     NotRegistered,
     Sasl(SaslError),
+    /// Phase-only protocol diagnostic; never contains secret bytes or server text.
+    SaslPhase(SaslStage, SaslError, &'static str),
     CredentialUnavailable,
     CredentialPolicy,
     InvalidCredential,

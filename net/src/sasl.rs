@@ -169,16 +169,31 @@ impl TlsIrcSession {
                 }
                 match frame {
                     Err(err) => error = Some(TransportError::Frame(err)),
-                    Ok(frame) => match flow.observe(&frame) {
-                        Ok(SaslAction::None) => {}
-                        Ok(action) => {
-                            if actions.len() == MAX_ACTIONS_PER_READ {
-                                error = Some(TransportError::RegistrationResponseOverflow);
-                            } else {
-                                actions.push(action);
+                    Ok(frame) => {
+                        let phase = flow.stage();
+                        match flow.observe(&frame) {
+                            Ok(SaslAction::None) => {}
+                            Ok(action) => {
+                                if actions.len() == MAX_ACTIONS_PER_READ {
+                                    error = Some(TransportError::RegistrationResponseOverflow);
+                                } else {
+                                    actions.push(action);
+                                }
                             }
+                            Err(err) => {
+                                // Static classes only: no raw server text,
+                                // account names, or AUTHENTICATE credentials.
+                                let event = match frame.command {
+                                    "900" => "ACCOUNT_900",
+                                    "903" => "SUCCESS_903",
+                                    "001" => "WELCOME_001",
+                                    "CAP" => "CAPABILITY",
+                                    "AUTHENTICATE" => "CHALLENGE",
+                                    _ => "OTHER",
+                                };
+                                error = Some(TransportError::SaslPhase(phase, err, event));
+                            },
                         }
-                        Err(err) => error = Some(TransportError::Sasl(err)),
                     },
                 }
             });
