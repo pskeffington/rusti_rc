@@ -90,6 +90,16 @@ impl CredentialRef {
     pub fn purpose(&self) -> CredentialPurpose {
         self.purpose
     }
+    /// For constructing the OS keychain service name; never log the value.
+    pub fn server_identity(&self) -> &str {
+        &self.server_identity
+    }
+
+    /// Credential references are unique to a server TLS identity + port.
+    pub fn server_port(&self) -> u16 {
+        self.server_port
+    }
+
 
     /// Bind each credential reference to the exact TLS server identity before
     /// a future authentication handler may access the OS keychain.
