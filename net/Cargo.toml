@@ -1,0 +1,21 @@
+[package]
+name = "rusti-transport-tls"
+version = "0.1.0"
+description = "Explicit, verified-TLS IRC transport; isolated from the portable Rust 1.70 core"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/pskeffington/rusti_rc"
+publish = false
+
+[workspace]
+resolver = "2"
+
+[dependencies]
+rusti-client = { path = "../crates/rusti-client" }
+rusti-proto = { path = "../crates/rusti-proto" }
+rustls = { version = "=0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+webpki-roots = "=1.0.9"
+
+[dev-dependencies]
+rcgen = { version = "=0.14.10", default-features = false, features = ["ring"] }
