@@ -166,7 +166,7 @@ impl CapNegotiator {
                 }
                 let acknowledged: Vec<&str> = params[2].split_whitespace().collect();
                 let same = acknowledged.len() == self.requested.len()
-                    && acknowledged.iter().all(|cap| self.requested.iter().any(|r| r == cap))
+                    && acknowledged.iter().all(|cap| self.requested.iter().any(|r| r.as_str() == *cap))
                     && self.requested.iter().all(|cap| acknowledged.contains(&cap.as_str()));
                 if !same {
                     self.state = CapState::Failed;
@@ -191,6 +191,9 @@ impl CapNegotiator {
                 }
                 for name in params[2].split_whitespace() {
                     self.enabled.retain(|cap| cap != name);
+                    if name == "message-tags" {
+                        self.enabled.retain(|cap| cap != "server-time");
+                    }
                     if self.required.iter().any(|cap| cap == name) {
                         self.state = CapState::Failed;
                         return Err(CapError::RequiredCapabilityRemoved);
@@ -229,7 +232,7 @@ mod tests {
             Ok(Some("CAP END\r\n".into()))
         );
         assert_eq!(cap.state(), CapState::Complete);
-        assert_eq!(cap.enabled(), &["message-tags", "server-time"]);
+        assert_eq!(cap.enabled().iter().map(String::as_str).collect::<Vec<_>>(), vec!["message-tags", "server-time"]);
     }
 
     #[test]
