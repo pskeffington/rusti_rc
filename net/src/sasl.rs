@@ -6,7 +6,6 @@
 #![forbid(unsafe_code)]
 
 use std::io::Write;
-use std::net::Shutdown;
 use std::time::{Duration, Instant};
 
 use rusti_client::credential_ref::{
@@ -16,6 +15,7 @@ use rusti_client::ClientConfig;
 use rusti_proto::sasl::{SaslAction, SaslPlainFlow, SaslStage};
 use zeroize::Zeroizing;
 
+use crate::cancel::RegistrationCancellation;
 use crate::{Receive, TlsIrcSession, TransportError};
 
 const MAX_AUTH_TIMEOUT: Duration = Duration::from_secs(30);
@@ -61,6 +61,8 @@ impl TlsIrcSession {
         &mut self,
         account: &str,
         password: &[u8],
+        deadline: Instant,
+        cancel: &RegistrationCancellation,
     ) -> Result<(), TransportError> {
         if !valid_account(account)
             || password.is_empty()
@@ -85,6 +87,9 @@ impl TlsIrcSession {
         frame.extend_from_slice(b"AUTHENTICATE ");
         frame.extend_from_slice(&encoded);
         frame.extend_from_slice(b"\r\n");
+        // Recheck cancellation even if a synchronous secret-store callback
+        // took time (e.g. OS unlock prompt). Never transmit after expiry.
+        self.registration_step(deadline, cancel)?;
         self.stream.write_all(&frame)?;
         self.stream.flush()?;
         Ok(())
@@ -108,21 +113,43 @@ impl TlsIrcSession {
         store: &S,
         timeout: Duration,
     ) -> Result<(), TransportError> {
+        self.register_sasl_plain_cancellable(
+            nickname, username, account, credential, store, timeout,
+            &RegistrationCancellation::new(),
+        )
+    }
+
+    /// Register with a shared cancellation token. An external operator/worker
+    /// may call cancel() from another thread. A short read poll bounds
+    /// cancellation latency during network wait; OS keychain unlock prompts
+    /// may still block inside the separately managed credential-store call.
+    #[allow(clippy::too_many_arguments)]
+    pub fn register_sasl_plain_cancellable<S: ProtectedCredentialStore>(
+        &mut self,
+        nickname: &str,
+        username: &str,
+        account: &str,
+        credential: &CredentialRef,
+        store: &S,
+        timeout: Duration,
+        cancel: &RegistrationCancellation,
+    ) -> Result<(), TransportError> {
         if self.registered || self.registration_attempted {
             return Err(TransportError::RegistrationAlreadyAttempted);
         }
+        // One attempted registration consumes this stream even if cancelled
+        // before sending any IRC protocol bytes.
+        self.registration_attempted = true;
         let result = self.register_sasl_plain_inner(
-            nickname, username, account, credential, store, timeout,
-        );
+            nickname, username, account, credential, store, timeout, cancel,
+        ).and_then(|()| self.restore_session_timeouts());
         if result.is_err() {
-            self.registered = false;
-            self.sasl_required = false;
-            self.registration = None;
-            let _ = self.stream.sock.shutdown(Shutdown::Both);
+            self.abort_registration_connection();
         }
         result
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn register_sasl_plain_inner<S: ProtectedCredentialStore>(
         &mut self,
         nickname: &str,
@@ -131,6 +158,7 @@ impl TlsIrcSession {
         credential: &CredentialRef,
         store: &S,
         timeout: Duration,
+        cancel: &RegistrationCancellation,
     ) -> Result<(), TransportError> {
         if timeout < Duration::from_millis(50) || timeout > MAX_AUTH_TIMEOUT {
             return Err(TransportError::InvalidTimeouts);
@@ -148,18 +176,15 @@ impl TlsIrcSession {
 
         let mut flow = SaslPlainFlow::new(nickname, username)?;
         let init = flow.begin()?;
-        self.registration_attempted = true;
         let deadline = Instant::now() + timeout;
 
         for line in init {
+            self.registration_step(deadline, cancel)?;
             self.write_frame(&line)?;
         }
 
         while !flow.registered() {
-            if Instant::now() >= deadline {
-                flow.abort();
-                return Err(TransportError::RegistrationTimedOut);
-            }
+            self.registration_step(deadline, cancel)?;
 
             let mut actions = Vec::new();
             let mut error = None;
@@ -208,7 +233,11 @@ impl TlsIrcSession {
                 }
                 Receive::Data(_) | Receive::TimedOut => {}
             }
+            // A completed read does not override a concurrently requested
+            // cancellation or elapsed overall registration deadline.
+            self.registration_step(deadline, cancel)?;
             for action in actions {
+                self.registration_step(deadline, cancel)?;
                 match action {
                     SaslAction::None => {}
                     SaslAction::Send(wire) => {
@@ -228,7 +257,7 @@ impl TlsIrcSession {
                         // created only inside this credential callback.
                         // Deliberately no secret bytes in returned errors.
                         let transmitted = store.with_secret(credential, |secret| {
-                            self.write_sasl_secret(account, secret)
+                            self.write_sasl_secret(account, secret, deadline, cancel)
                         });
                         match transmitted {
                             Ok(inner) => inner?,
@@ -239,6 +268,7 @@ impl TlsIrcSession {
                 }
             }
         }
+        self.registration_step(deadline, cancel)?;
         if flow.stage() != SaslStage::Registered {
             return Err(TransportError::CredentialPolicy);
         }
