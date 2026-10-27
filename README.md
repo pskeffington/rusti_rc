@@ -2,7 +2,7 @@
 
 **Rust-native IRC protocol research and security-gated communications adapter for [Rust Boy](https://github.com/pskeffington/pip_boy).**
 
-**Current state (2026-10-26): an offline-only, disabled-by-default scaffold, not a usable IRC client or server.** No sockets, TLS/SASL sessions, background discovery, persisted messages, server listener, signed installer or Rust Boy imports are implemented. A Rust Boy IRC connection should appear only after the separately documented security, compatibility and operator-consent gates pass.
+**Current state (2026-10-26): a portable offline-first protocol core plus an isolated, explicitly activated TLS transport preview.** The portable root workspace opens no sockets; the separately built net/ crate can make one caller-requested, certificate-verified IRC TCP/TLS connection. No SASL, automatic discovery, persisted messages, LAN server, signed installer or Rust Boy integration exists. This is not a deployable field communications system.
 
 ## Purpose
 
@@ -13,12 +13,12 @@ Build a modular IRC stack, independently distributable for portable Linux and ol
 | Path | Actual scaffold state |
 |---|---|
 | [rusti-proto](crates/rusti-proto/src/lib.rs) | Dependency-free bounded IRC parser, tag decoding, CAP 302 planner, incremental byte framing and offline tests; not a complete RFC/IRCv3 implementation |
-| [rusti-client](crates/rusti-client/src/lib.rs) | Disabled-by-default TLS-required connection policy; all networking returns not implemented |
+| [rusti-client](crates/rusti-client/src/lib.rs) | Disabled-by-default, Rust 1.70-compatible connection policy; core alone still returns not implemented |
 | [rusti-server](crates/rusti-server/src/lib.rs) | Disabled-by-default, loopback/TLS/limits policy; no actual listener |
 | [rusti-adapter](crates/rusti-adapter/src/lib.rs) | Untrusted read-only IRC chat framing for future Rust Boy import; no Vault/peer privileges |
 | [rusti-testkit](crates/rusti-testkit/src/lib.rs) | Synthetic offline wire fixtures |
 | [standalone-cli](examples/standalone-cli/src/main.rs) | Offline smoke test only, prints fixture result |
-| [CI](.github/workflows/ci.yml) | [Run #15 passed 10/10 jobs](https://github.com/pskeffington/rusti_rc/actions/runs/40440406547): Rust 1.70/stable Linux/macOS/Windows tests; ARMv6/ARMv7/ARM64/musl source-only checks. Hardware/interoperability not validated |
+| [TLS networking preview](net/README.md) | Separate modern rustls/ring workspace: explicit verified TLS connection, basic IRC commands and localhost certificate tests; no Rust Boy import |\n| [CI](.github/workflows/ci.yml) | [Run #15 passed 10/10 jobs](https://github.com/pskeffington/rusti_rc/actions/runs/40440406547): Rust 1.70/stable Linux/macOS/Windows tests; ARMv6/ARMv7/ARM64/musl source-only checks. Hardware/interoperability not validated |
 
 ## Local scaffold test
 
@@ -27,7 +27,7 @@ cargo test --workspace --all-targets
 cargo run -p rusti-standalone-cli
 ```
 
-These commands do **not** connect to IRC. No third-party crates are required for the portable workspace; the separate nightly fuzz harness alone has a dev-only `libfuzzer-sys` dependency. The minimum Rust toolchain **candidate** for the portable workspace is 1.70, with Rust 2021 edition. Rust 1.70 CI passed on the tested host runners; hardware, OS ABI and field deployment claims remain unverified. Rust Boy's independently maintained workspace currently uses Rust 1.90.
+These root-workspace commands do **not** connect to IRC. No third-party crates are required for the portable workspace; the separate nightly fuzz harness alone has a dev-only `libfuzzer-sys` dependency. The minimum Rust toolchain **candidate** for the portable workspace is 1.70, with Rust 2021 edition. Rust 1.70 CI passed on the tested host runners; hardware, OS ABI and field deployment claims remain unverified. Rust Boy's independently maintained workspace currently uses Rust 1.90.
 
 ## Research, security and integration documentation
 
@@ -38,7 +38,7 @@ These commands do **not** connect to IRC. No third-party crates are required for
 - [Threat model](docs/security/THREAT_MODEL.md)
 - [Release acceptance checklist](docs/security/RELEASE_CHECKLIST.md)
 - [Rust Boy adapter contract](docs/integration/RUST_BOY_ADAPTER_CONTRACT.md)
-- [G2 secure TLS transport and legacy-target decision](docs/architecture/G2_SECURE_TRANSPORT_DECISION.md)
+- [G2 secure TLS transport and legacy-target decision](docs/architecture/G2_SECURE_TRANSPORT_DECISION.md)\n- [G2 TLS source and test evidence](docs/security/G2_TLS_IMPLEMENTATION_EVIDENCE.md)
 - [Architecture and phased development roadmap](docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md)
 - [G1b protocol implementation and pending evidence](docs/security/G1B_PROTOCOL_EVIDENCE.md)
 - [Nightly-only isolated fuzz harness](fuzz/README.md)
