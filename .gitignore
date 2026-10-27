@@ -17,3 +17,8 @@
 coverage/
 dist/
 release-bundles/
+
+# Cargo fuzz uses a separate nightly-only workspace
+/fuzz/target/
+/fuzz/artifacts/
+/fuzz/coverage/
