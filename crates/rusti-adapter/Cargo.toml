@@ -1,0 +1,11 @@
+[package]
+name = "rusti-adapter"
+description = "Read-only, untrusted IRC display adapter for future Rust Boy import"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+rusti-proto = { path = "../rusti-proto" }
+rusti-client = { path = "../rusti-client" }
