@@ -288,8 +288,8 @@ impl TlsIrcSession {
                         }
                         Ok(frame) => {
                             if let Some(flow) = registration.as_mut() {
-                                if (frame.command.eq_ignore_ascii_case("CAP")
-                                    || frame.command.eq_ignore_ascii_case("ERROR"))
+                                if frame.command.eq_ignore_ascii_case("CAP")
+                                    || frame.command.eq_ignore_ascii_case("ERROR")
                                 {
                                     if let Err(reg_error) = flow.observe(frame) {
                                         error = Some(TransportError::Registration(reg_error));
