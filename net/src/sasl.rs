@@ -169,16 +169,19 @@ impl TlsIrcSession {
                 }
                 match frame {
                     Err(err) => error = Some(TransportError::Frame(err)),
-                    Ok(frame) => match flow.observe(&frame) {
-                        Ok(SaslAction::None) => {}
-                        Ok(action) => {
-                            if actions.len() == MAX_ACTIONS_PER_READ {
-                                error = Some(TransportError::RegistrationResponseOverflow);
-                            } else {
-                                actions.push(action);
+                    Ok(frame) => {
+                        let phase = flow.stage();
+                        match flow.observe(&frame) {
+                            Ok(SaslAction::None) => {}
+                            Ok(action) => {
+                                if actions.len() == MAX_ACTIONS_PER_READ {
+                                    error = Some(TransportError::RegistrationResponseOverflow);
+                                } else {
+                                    actions.push(action);
+                                }
                             }
+                            Err(err) => error = Some(TransportError::SaslPhase(phase, err)),
                         }
-                        Err(err) => error = Some(TransportError::SaslPhase(flow.stage(), err)),
                     },
                 }
             });
