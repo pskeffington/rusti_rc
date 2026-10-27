@@ -2,7 +2,7 @@
 
 **Rust-native IRC protocol research and security-gated communications adapter for [Rust Boy](https://github.com/pskeffington/pip_boy).**
 
-**Current state (2026-10-27): Rust 1.70 portable IRC core plus an isolated opt-in verified-TLS client, IRCv3 SASL PLAIN and optional desktop OS credential adapter.** Importing the portable root crates starts no sockets. The modern net/ crate requires a caller-requested TLS connection and explicit IRC/SASL registration. macOS Keychain and Windows Credential Manager support is feature-gated; Linux headless credential storage is not implemented. G2f adds bounded cancellable registration and an offline legacy host preflight, **not** a hardware credential store. There is no automatic discovery, persistent chat, LAN server, signed installer or Rust Boy import. **Not a deployable field communications system.**
+**Current state (2026-10-27): Rust 1.70 portable IRC core plus an isolated opt-in verified-TLS client, IRCv3 SASL PLAIN and optional desktop OS credential adapter.** Importing the portable root crates starts no sockets. The modern net/ crate requires a caller-requested TLS connection and explicit IRC/SASL registration. macOS Keychain and Windows Credential Manager support is feature-gated; Linux headless credential storage is not implemented. G2f adds bounded cancellable registration and an offline legacy host preflight, **not** a hardware credential store. There is no automatic discovery, persistent chat, LAN server, production release signer/installer or Rust Boy import. G2g-A has a **laboratory-only** detached-signature verifier that never deploys. **Not a deployable field communications system.**
 
 ## Purpose
 
@@ -19,9 +19,10 @@ Build a modular IRC stack, independently distributable for portable Linux and ol
 | [rusti-testkit](crates/rusti-testkit/src/lib.rs) | Synthetic offline wire fixtures |
 | [standalone-cli](examples/standalone-cli/src/main.rs) | Offline smoke test only, prints fixture result |
 | [TLS networking preview](net/README.md) | Separate rustls/ring workspace: explicit verified TLS, IRC CAP and optional SASL PLAIN; feature-gated macOS/Windows native keyring; no Rust Boy import |
+| [Offline signed-bundle lab CI](.github/workflows/offline-release-lab.yml) | [G2g-A run passed 14/14 tests](https://github.com/pskeffington/rusti_rc/actions/runs/40457172972): synthetic Ed25519 verify, tamper, wrong key/target and untrusted test-floor rejection; always deployment blocked |
 | [Portable CI](.github/workflows/ci.yml) | [G2f 10/10 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40456201437): Rust 1.70/stable Linux/macOS/Windows and ARMv6/ARMv7/ARM64/musl compile-only checks |
-| [Independent IRCd CI](.github/workflows/ergo-interop.yml) | [G2f 1/1 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40456201422): digest-pinned localhost Ergo v2.19.1, ephemeral CA, ordinary channel chat and 3 real-account synthetic SASL tests. Not hardware acceptance | 
-| [TLS CI](.github/workflows/verified-tls.yml) | [G2f 3/3 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40456201424): locked TLS/Clippy on Linux/macOS/Windows with G2f cancellation, silent-peer and trickle tests |
+| [Independent IRCd CI](.github/workflows/ergo-interop.yml) | [G2g-A 1/1 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40457172616): digest-pinned localhost Ergo v2.19.1, ephemeral CA, ordinary channel chat and 3 real-account synthetic SASL tests. Not hardware acceptance | 
+| [TLS CI](.github/workflows/verified-tls.yml) | [G2g-A 3/3 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40457172858): locked TLS/Clippy on Linux/macOS/Windows, including G2g-A cancellation during blocked credential retrieval and G2f interrupted registration |
 
 ## Local scaffold test
 
