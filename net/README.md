@@ -6,7 +6,8 @@
 
 - `net/Cargo.toml`: maintained `rustls = 0.23.46`, explicit `ring` provider, `webpki-roots = 1.0.9`; `rcgen` is used **only in tests** to create ephemeral in-memory localhost certificates.
 - `net/src/lib.rs`: `TlsIrcSession::connect_tls` takes a validated `rusti_client::ClientConfig`, a concrete IP/port `SocketAddr`, a reviewed `RootCertStore`, and bounded timeouts. **Calling it is an explicit network action.** There is no DNS lookup, provider guessing, certificate-skip option, plaintext fallback, secret-bearing SASL, discovery, or automatic reconnect.
-- `TlsIrcSession` offers bounded read callbacks, restricted IRC registration, JOIN, PING/PONG response, and `PRIVMSG`. A write reports `SubmittedUnconfirmed`, never Rust Boy `STORED`.
+- `TlsIrcSession` offers bounded read callbacks, explicit CAP registration over authenticated TLS, JOIN, PING/PONG response, and `PRIVMSG`. JOIN and PRIVMSG reject sends until IRC registration succeeds, and a mandatory capability's revocation disables sending. A write reports `SubmittedUnconfirmed`, never Rust Boy `STORED`.
+- `register_with_capabilities` is a **blocking, operator-called** phase using an allowlisted CAP state machine; no passwords/SASL, automatic discovery, queues or hidden reconnects. See [G2b design](../docs/architecture/G2B_REGISTRATION_RECOVERY.md).
 - `net/tests/verified_tls_loopback.rs` generates ephemeral certificates in memory and validates success, hostname mismatch, untrusted roots, preflight TLS policy, and safe message framing on localhost. Synthetic tests and Clippy passed in the [Linux/macOS/Windows locked CI matrix](https://github.com/pskeffington/rusti_rc/actions/runs/40442639269) (3/3). Source was merged in [PR #3](https://github.com/pskeffington/rusti_rc/pull/3).
 
 ## Offline-only test on a development machine
