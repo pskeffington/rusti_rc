@@ -88,7 +88,7 @@ where
 
 fn joined_channel(connection: &mut TlsIrcSession) -> bool {
     until(connection, |message| {
-        message.command == "366" && message.params().iter().any(|param| *param == CHANNEL)
+        message.command == "366" && message.params().contains(&CHANNEL)
     })
 }
 
