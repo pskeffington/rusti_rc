@@ -8,6 +8,7 @@ members = [
     "examples/standalone-cli",
 ]
 resolver = "2"
+exclude = ["fuzz", "net"]
 
 [workspace.package]
 version = "0.1.0"
