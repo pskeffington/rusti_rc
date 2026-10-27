@@ -1,19 +1,19 @@
 # G2 authenticated TLS client implementation and validation record
 
-Date: 2026-10-26. Status: **implementation under G2 PR; not a production networking release.** Tests are synthetic loopback-only, not real IRC server interoperability or ARM hardware acceptance.
+Date: 2026-10-26. Status: **G2 TLS preview merged to main via PR #3 (`f0cd7c9801b435a11c4067fdac33b0fa2a2693f3`); not a production networking release.** [Final locked TLS CI passed 3/3 jobs](https://github.com/pskeffington/rusti_rc/actions/runs/40442639269) on Linux/macOS/Windows, including synthetic localhost TLS tests and Clippy. [Portable core passed 10/10](https://github.com/pskeffington/rusti_rc/actions/runs/40442639261). These are not independent IRC server interoperability or ARM hardware acceptance.
 
 | Control | Implemented in source | Evidence still required |
 |---|---|---|
-| Separate modern TLS MSRV | Independent `net/` Cargo workspace; root Rust 1.70 crates excluded from dependency resolution | CI confirmation and exact dependency MSRV |
+| Separate modern TLS MSRV | Independent `net/` workspace; root Rust 1.70 protocol tests remained green | Net workspace compiled/tested on stable; Rust 1.85 exact MSRV unverified |
 | TLS provider and supported protocols | `rustls 0.23.46`, explicit `ring`, TLS 1.2/1.3; no insecure verifier | ABI/crypto provider audit and real-device tests |
 | Explicit socket connect | `connect_tls` requires enabled client, explicit socket address matching configured port | Test disabled config creates zero sockets |
-| Server authentication | `ServerName::try_from(config.server_host)` + `RootCertStore` + default rustls validation | Negative local cert tests; enterprise root enrollment review |
-| No TLS downgrade | ClientConfig rejects `tls_required=false`; only rustls StreamOwned can send IRC | Negative preflight and invalid certificate tests |
+| Server authentication | `ServerName::try_from(config.server_host)` + `RootCertStore` + default rustls validation | Local wrong-name and untrusted-CA rejection passed; enterprise root enrollment review pending |
+| No TLS downgrade | ClientConfig rejects `tls_required=false`; only rustls StreamOwned can send IRC | Local negative preflight test passed; independent pentest pending |
 | Time limits | Connect, full TLS handshake deadline, and I/O timeouts capped at 30s | Artificial slow server / boundary and cancellation tests |
 | Bounded app framing | 1 KiB per-call plaintext reads into existing FrameDecoder with max 8703-byte frame budget | Flood/latency/hardware memory tests |
 | Untrusted chat state | Restricted encoders, no SASL, IRC nick remains untrusted, writes are `SubmittedUnconfirmed` | Independent security and Rust Boy integration review |
 | Legacy compatibility | Root protocol Rust 1.70 preserved; TLS workspace modern | ARMv6/ARMv7, old Linux, macOS/Windows real tests |
-| Locked dependencies | Cargo-generated net/Cargo.lock committed with 66 packages; CI configured for --locked | Independent CVE/license/SBOM review pending |
+| Locked dependencies | Cargo-generated net/Cargo.lock committed with 66 packages; --locked tests and lint passed on Linux/macOS/Windows | Independent CVE/license/SBOM review pending |
 | Offline redeployment | No installer or versioned, signed trust-root bundle added | G6 signed release and rollback drills |
 
 Source basis: [rustls 0.23](https://docs.rs/rustls/0.23.46/rustls/), [webpki-roots 1.0.9](https://docs.rs/webpki-roots/1.0.9/webpki_roots/), [RFC 9325](https://www.rfc-editor.org/rfc/rfc9325), [RFC 9525](https://www.rfc-editor.org/rfc/rfc9525), [rcgen 0.14.10](https://docs.rs/rcgen/0.14.10/rcgen/).
