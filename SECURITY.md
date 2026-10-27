@@ -14,7 +14,7 @@ If GitHub private vulnerability reporting is enabled for this repository, use th
 - A read-only IRC adapter always describes chat sender identity as unverified; it cannot assign Rust Boy tasks, approve devices or authenticate an organization.
 - TLS, SASL, real socket handling, secure key storage, parser fuzzing, external dependency audit, credential revocation, vulnerability response and signed deployment verification have not been built.
 - The six-host/toolchain GitHub Actions matrix tests **only what the workflow actually executes**; CI cross-target success does not certify older operating systems or hardware.
-- This repo has no selected redistribution license yet. Before publishing a reusable crate or signed release, choose and record licensing and audit third-party notices.
+- Source is [MIT-licensed](LICENSE), but crate publication and deployable releases remain gated pending protocol, dependency, security and signed-distribution validation.
 
 Read [threat model](docs/security/THREAT_MODEL.md), [security research](docs/research/SECURITY_LEGACY_DEPLOYMENT_MATRIX.md) and [offline release runbook](docs/deployment/OFFLINE_REDEPLOYMENT_RUNBOOK.md).
 
