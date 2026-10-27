@@ -38,6 +38,7 @@ These commands do **not** connect to IRC. No third-party crates are required for
 - [Threat model](docs/security/THREAT_MODEL.md)
 - [Release acceptance checklist](docs/security/RELEASE_CHECKLIST.md)
 - [Rust Boy adapter contract](docs/integration/RUST_BOY_ADAPTER_CONTRACT.md)
+- [G2 secure TLS transport and legacy-target decision](docs/architecture/G2_SECURE_TRANSPORT_DECISION.md)
 - [Architecture and phased development roadmap](docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md)
 - [G1b protocol implementation and pending evidence](docs/security/G1B_PROTOCOL_EVIDENCE.md)
 - [Nightly-only isolated fuzz harness](fuzz/README.md)
