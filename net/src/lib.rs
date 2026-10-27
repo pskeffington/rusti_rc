@@ -47,7 +47,7 @@ pub enum TransportError {
     NotRegistered,
     Sasl(SaslError),
     /// Phase-only protocol diagnostic; never contains secret bytes or server text.
-    SaslPhase(SaslStage, SaslError),
+    SaslPhase(SaslStage, SaslError, &'static str),
     CredentialUnavailable,
     CredentialPolicy,
     InvalidCredential,
