@@ -4,7 +4,7 @@ This repository is a **standalone experimental IRC stack**, not a deployed Rust 
 
 ## Find the owning code
 
-- [Machine-readable inventory](index/MACHINE_INDEX.json): indexed paths, crate ownership, H1/H2 documentation sections and task routes. Generated; do not edit manually.
+- [Machine-readable inventory](index/MACHINE_INDEX.json): indexed paths, crate ownership, filename-derived document labels and task routes. Generated; do not edit manually.
 - [Curated routing catalog](index/catalog.json): authoritative machine lookup topics and module trust boundaries. Edit this when adding or moving an ownership boundary.
 - [Human documentation map](docs/INDEX.md): generated source and documentation links.
 - [Rust Boy import contract](docs/integration/RUST_BOY_ADAPTER_CONTRACT.md): future host integration, **not yet implemented**.
