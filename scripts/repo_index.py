@@ -159,33 +159,12 @@ def kind_for(path):
     return "metadata"
 
 
-def headings(root, path):
+def doc_title(path):
+    # Filename-derived navigation avoids copying document contents and
+    # reduces token duplication. Semantic task routes are curated separately.
     if path == DOCS:
-        return "Repository navigation", []
-    try:
-        content = (root / path).read_text(encoding="utf-8")
-    except (OSError, UnicodeError):
-        raise IndexProblem("unreadable documentation: " + path)
-    if len(content) > 256000:
-        raise IndexProblem("documentation over size limit: " + path)
-    title, sections, fenced = None, [], False
-    for line in content.splitlines():
-        if line.strip().startswith((chr(96) * 3, "~" * 3)):
-            fenced = not fenced
-            continue
-        if fenced:
-            continue
-        hit = re.match(r"^(#{1,2})[ \t]+(.+?)\s*#*\s*$", line)
-        if not hit:
-            continue
-        value = hit.group(2).strip()
-        if len(value) > 120:
-            continue
-        if hit.group(1) == "#" and title is None:
-            title = value
-        elif hit.group(1) == "##" and len(sections) < 24:
-            sections.append(value)
-    return title or PurePosixPath(path).name, sections
+        return "Repository navigation"
+    return PurePosixPath(path).stem.replace("_", " ").replace("-", " ")
 
 
 def assemble(root, catalog, paths):
@@ -202,14 +181,12 @@ def assemble(root, catalog, paths):
         entry = {"path": path, "module": module_for(path, catalog["modules"]),
                  "kind": kind_for(path)}
         if path.endswith(".md"):
-            title, sections = headings(root, path)
-            entry["title"], entry["sections"] = title, sections
+            entry["title"] = doc_title(path)
         files.append(entry)
     # When first creating this generated docs file it is not yet tracked.
     if DOCS not in paths:
         files.append({"path": DOCS, "module": module_for(DOCS, catalog["modules"]),
-                      "kind": "documentation", "title": "Repository navigation",
-                      "sections": []})
+                      "kind": "documentation", "title": "Repository navigation"})
     files.sort(key=lambda e: e["path"])
     known = {f["path"] for f in files} | {MACHINE}
     for module in catalog["modules"]:
