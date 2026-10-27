@@ -108,7 +108,7 @@ def load_catalog(root):
         seen_routes.add(rid)
         terms, related = route["terms"], route["related"]
         if not isinstance(terms, list) or not terms or any(
-            not isinstance(t, str) or not re.fullmatch(r"[a-z0-9][a-z0-9 -]{1,50}", t)
+            not isinstance(t, str) or not re.fullmatch(r"[a-z0-9][a-z0-9 ._-]{1,50}", t)
             for t in terms
         ) or len(terms) != len(set(terms)):
             raise IndexProblem("invalid route terms")
