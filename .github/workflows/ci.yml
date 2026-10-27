@@ -51,3 +51,31 @@ jobs:
 
   # The release checklist requires a Cargo-generated lockfile and --locked
   # builds before deployment. No release, deployment or signing jobs yet.
+
+  legacy-target-check:
+    name: Build-only check / ${{ matrix.target }}
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - arm-unknown-linux-gnueabihf
+          - armv7-unknown-linux-gnueabihf
+          - aarch64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+    steps:
+      - name: Checkout exact repository revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install Rust target std
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup target add --toolchain stable "${{ matrix.target }}"
+      - name: Portable source compile-only check
+        shell: bash
+        run: cargo +stable check --workspace --all-targets --target "${{ matrix.target }}"
+
+  # Cross-target cargo check does not link, boot or verify real hardware,
+  # TLS/crypto provider availability, OS ABI support or deployment security.
