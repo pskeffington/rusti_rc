@@ -1,20 +1,20 @@
 # G2 secure transport / legacy deployment selection gate
 
-Status: **architecture decision record, not implemented**, 2026-10-26. The portable IRC framing crate has passed CI on Rust 1.70; no TLS, SASL, credential vault, socket, or live IRC server connection exists.
+Status: **design plus G2 TLS implementation preview in review**, 2026-10-26. The Rust 1.70 framing core has passed CI. A separate net/ workspace provides an operator-invoked rustls client, synthetic localhost TLS tests and explicit trust roots; live IRC server interoperability, SASL, credential vault, revocation and supported legacy hardware remain unverified.
 
 ## Decision: separate protocol MSRV from network crypto MSRV
 
 The protocol/parser crates retain the Rust 2021 / 1.70 source compatibility target. **Do not pin cryptography to an out-of-support version simply to preserve that compiler minimum.**
 
-A later network transport implementation may use a newer audited Rust compiler while producing target-specific binaries for an older operating system/CPU, provided the actual kernel/ABI, crypto provider and runtime minimum are independently verified. Use an optional network-specific crate or explicitly gated features so importing the portable parser never requires linking TLS or opening sockets.
+The separate net/ implementation uses a newer audited Rust compiler while producing target-specific binaries for an older operating system/CPU, provided the actual kernel/ABI, crypto provider and runtime minimum are independently verified. The nested net/ workspace is independent from the portable root workspace. Merely importing the parser never links TLS or opens sockets.
 
 ## Literature / engineering matrix
 
 | Option | Evidence | Benefits | Legacy/security concerns | Decision |
 |---|---|---|---|---|
-| rustls with current supported provider | [rustls current documentation](https://rustls.dev/docs/rustls/index.html) | TLS 1.2/1.3, modern certificate validation and secure defaults | Actual version MSRV and provider target/toolchain prerequisites must be verified; do not assume Rust 1.70 | Preferred candidate; version not selected |
+| rustls with current supported provider | [rustls current documentation](https://rustls.dev/docs/rustls/index.html) | TLS 1.2/1.3, modern certificate validation and secure defaults | Actual version MSRV and provider target/toolchain prerequisites must be verified; do not assume Rust 1.70 | 0.23.46 selected for the isolated preview, no production acceptance yet |
 | aws-lc-rs crypto provider | [rustls provider docs](https://docs.rs/rustls/latest/rustls/) | Well-maintained crypto primitives | More C/assembly/build-system dependencies, ARMv6 and old libc uncertain | Require per-target compile+run and audit |
-| ring crypto provider | [rustls ring support](https://docs.rs/rustls/latest/rustls/) | Potentially simpler build on some targets | Its CPU/OS support differs by architecture; requires target evidence and updates | Alternate candidate, not default without proof |
+| ring crypto provider | [rustls ring support](https://docs.rs/rustls/latest/rustls/) | Potentially simpler build on some targets | Its CPU/OS support differs by architecture; requires target evidence and updates | ring explicitly selected for preview; ARMv6/v7 support must be proven |
 | Platform native TLS | OS security APIs or OpenSSL bindings | Can reuse host CA stores | Legacy EOL host has stale TLS/CA, patch and ABI risks; OS API behavior differs | Do not use to bypass validated TLS requirements |
 | Plain TCP port 6667 | Historical IRC compatibility | Broad old-server compatibility | No server identity, no confidentiality, credential exposure | **Rejected for operational use** |
 
@@ -39,6 +39,6 @@ Normative guidance: [RFC 9325](https://www.rfc-editor.org/rfc/rfc9325) (TLS >=1.
 - Hidden outbound contacts, credential logging, unbounded buffering/reconnect loops.
 - Calling a cross-compiled binary `supported` before a hardware test.
 
-## Exit criteria
+## Implementation status and CI\n\n- Current source: [net/src/lib.rs](../../net/src/lib.rs), [synthetic certificate tests](../../net/tests/verified_tls_loopback.rs), [net README](../../net/README.md), [G2 evidence](../security/G2_TLS_IMPLEMENTATION_EVIDENCE.md).\n- Only explicit connect_tls can create a socket; it uses a supplied SocketAddr instead of DNS, validates server_host through rustls and rejects TLS-required=false.\n- This is synchronous/bounded I/O meant for a worker thread, not a UI event thread. Cancellation, automatic reconnect, credential storage and full IRCv3 orchestration are pending.\n- Tests are in GitHub Actions; do not claim production/legacy acceptance until test results and hardware evidence are reviewed.\n\n## Exit criteria
 
 Two offline-controlled test clients use authenticated TLS to an independently configured IRC server, successfully negotiate only allowlisted CAP behavior, show direct/channel chat state without false receipts, survive forced network loss with bounded reconnect, and demonstrably reject expired/wrong-name/untrusted certificates. Replay tests, signed bundle and supported target evidence remain separate release gates.
