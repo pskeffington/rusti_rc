@@ -9,7 +9,7 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use rcgen::{
-    date_time_ymd, generate_simple_self_signed, CertificateParams, CertifiedKey, KeyPair,
+    date_time_ymd, CertificateParams, KeyPair,
 };
 use rusti_client::ClientConfig;
 use rusti_proto::cap::CapError;
@@ -29,26 +29,40 @@ enum Script {
     Future,
 }
 
-fn certificate(script: Script) -> (rustls::pki_types::CertificateDer<'static>, Vec<u8>) {
-    if matches!(script, Script::Expired | Script::Future) {
-        let mut params = CertificateParams::new(vec!["localhost".to_string()]).unwrap();
-        if matches!(script, Script::Expired) {
-            params.not_before = date_time_ymd(2015, 1, 1);
-            params.not_after = date_time_ymd(2016, 1, 1);
-        } else {
-            params.not_before = date_time_ymd(2099, 1, 1);
-            params.not_after = date_time_ymd(2100, 1, 1);
-        }
-        let signing_key = KeyPair::generate().unwrap();
-        let cert = params.self_signed(&signing_key).unwrap();
-        (cert.der().clone(), signing_key.serialize_der())
-    } else {
-        let CertifiedKey { cert, signing_key } =
-            generate_simple_self_signed(vec!["localhost".to_string()]).unwrap();
-        (cert.der().clone(), signing_key.serialize_der())
-    }
-}
+fn certificate(
+    script: Script,
+) -> (
+    Vec<rustls::pki_types::CertificateDer<'static>>,
+    rustls::pki_types::CertificateDer<'static>,
+    Vec<u8>,
+) {
+    // A long-lived local CA anchors an individually dated leaf. Trusting an
+    // expired self-signed root directly is not a reliable expiry regression.
+    let mut ca = CertificateParams::new(vec!["rusti-test-ca.invalid".into()]).unwrap();
+    ca.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Unconstrained);
+    ca.key_usages = vec![rcgen::KeyUsagePurpose::KeyCertSign];
+    let ca_key = KeyPair::generate().unwrap();
+    let issuer = rcgen::CertifiedIssuer::self_signed(ca, ca_key).unwrap();
 
+    let mut leaf = CertificateParams::new(vec!["localhost".into()]).unwrap();
+    leaf.key_usages = vec![rcgen::KeyUsagePurpose::DigitalSignature];
+    leaf.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ServerAuth];
+    if matches!(script, Script::Expired) {
+        leaf.not_before = date_time_ymd(2015, 1, 1);
+        leaf.not_after = date_time_ymd(2016, 1, 1);
+    }
+    if matches!(script, Script::Future) {
+        leaf.not_before = date_time_ymd(2099, 1, 1);
+        leaf.not_after = date_time_ymd(2100, 1, 1);
+    }
+    let leaf_key = KeyPair::generate().unwrap();
+    let signed = leaf.signed_by(&leaf_key, &issuer).unwrap();
+    (
+        vec![signed.der().clone(), issuer.der().clone()],
+        issuer.der().clone(),
+        leaf_key.serialize_der(),
+    )
+}
 fn read_line(tls: &mut StreamOwned<ServerConnection, std::net::TcpStream>) -> Option<String> {
     let mut line = Vec::new();
     loop {
@@ -67,15 +81,15 @@ fn read_line(tls: &mut StreamOwned<ServerConnection, std::net::TcpStream>) -> Op
 }
 
 fn start_server(script: Script) -> (SocketAddr, RootCertStore, JoinHandle<Vec<String>>) {
-    let (cert, key) = certificate(script);
+    let (chain, anchor, key) = certificate(script);
     let mut trust = RootCertStore::empty();
-    trust.add(cert.clone()).unwrap();
+    trust.add(anchor).unwrap();
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let cfg = ServerConfig::builder_with_provider(provider)
         .with_safe_default_protocol_versions()
         .unwrap()
         .with_no_client_auth()
-        .with_single_cert(vec![cert], PrivatePkcs8KeyDer::from(key).into())
+        .with_single_cert(chain, PrivatePkcs8KeyDer::from(key).into())
         .unwrap();
 
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
