@@ -1,19 +1,19 @@
 # G1b protocol hardening evidence and known limitations
 
-Baseline: 2026-10-26. **Implementation authored on the MIT/G1b development branch; build, lint and fuzz runtime results require independent CI evidence.**
+Baseline: 2026-10-26. **G1b foundation merged to main (squash commit `bb6d948203e3e1efd2a67644f2bd132159749e8d`), with 10/10 configured CI jobs passing for tested PR head `1d174265ff6c016256938db191d0332f922764bb`.** Lint, fuzz runtime, independent IRCd interoperability and real hardware acceptance still require evidence. [CI run #15](https://github.com/pskeffington/rusti_rc/actions/runs/40440406547).
 
 ## Scope implemented in source
 
 | Gate / claim | Implementation | Evidence status |
 |---|---|---|
 | Standard MIT licensing | Root LICENSE, Cargo workspace and each package's inherited SPDX identifier | Repository source confirmed; upstream code attribution required before copying |
-| IRC baseline frame sizes | rusti-proto::parse_frame and encode_privmsg enforce 512-byte base incl. CRLF | Deterministic tests authored; cross-target CI pending |
-| IRCv3 inbound tag sizes | Tag-prefix limit 8191 bytes separate from 512-byte base | Boundary tests authored; network interoperability pending |
-| IRCv3 tags | Case-sensitive opaque keys, last duplicate wins, standard value unescape | Unit/integration tests authored; decoded tag content must remain untrusted |
-| Incremental byte stream | FrameDecoder processes fragmented, repeated, invalid UTF-8 and oversized bytes, bounded to 8703 bytes plus Vec overhead | Deterministic tests authored; operational TLS reader not implemented |
-| IRCv3 CAP 302 (limited subset) | Pure-data LS multiline aggregator, REQ, ACK/NAK and required-capability DEL handling | Tests authored; no SASL, NEW activation, full ACK multi-line support or complete protocol FSM |
-| Parser fuzz | Isolated cargo-fuzz nightly libFuzzer target + deterministic pseudo-random stream regression | Source committed; execution NOT VERIFIED |
-| Rust Boy trust boundary | Adapter only produces UntrustedChat with UnverifiedRemoteLabel | No production Rust Boy import or org command path |
+| IRC baseline frame sizes | rusti-proto::parse_frame and encode_privmsg enforce 512-byte base incl. CRLF | Deterministic tests passed in Rust 1.70/stable CI (Linux, Mac, Windows); no wire interoperability test |
+| IRCv3 inbound tag sizes | Tag-prefix limit 8191 bytes separate from 512-byte base | Boundary tests passed in CI; network interoperability pending |
+| IRCv3 tags | Case-sensitive opaque keys, last duplicate wins, standard value unescape | Unit/integration tests passed in CI; decoded tag content remains untrusted |
+| Incremental byte stream | FrameDecoder processes fragmented, repeated, invalid UTF-8 and oversized bytes, bounded to 8703 bytes plus Vec overhead | Deterministic tests passed in CI; operational TLS reader not implemented |
+| IRCv3 CAP 302 (limited subset) | Pure-data LS multiline aggregator, REQ, ACK/NAK and required-capability DEL handling | Tests passed in CI; no SASL, NEW activation, full ACK multi-line support or complete protocol FSM |
+| Parser fuzz | Isolated cargo-fuzz nightly libFuzzer target + deterministic pseudo-random stream regression | Source committed; nightly libFuzzer execution NOT VERIFIED |
+| Rust Boy trust boundary | Adapter only produces UntrustedChat with UnverifiedRemoteLabel | Offline adapter contract tests passed in CI; no production Rust Boy import or org command path |
 | TLS/SASL, IRC networks, queues, and LAN server | No runtime transport code | NOT IMPLEMENTED |
 
 ## Protocol source basis
@@ -22,6 +22,15 @@ Baseline: 2026-10-26. **Implementation authored on the MIT/G1b development branc
 - [IRCv3 message tags](https://ircv3.net/specs/extensions/message-tags.html), 8191-byte inbound tag limit including @ and trailing separator, 4094-byte per-sender limits, duplicate last wins, tag escaping and opaque unknown keys.
 - [IRCv3 capability negotiation](https://ircv3.net/specs/extensions/capability-negotiation.html), CAP LS 302, multiline LS, values, ACK/NAK, END, NEW/DEL.
 - [cargo-fuzz official project](https://github.com/rust-fuzz/cargo-fuzz) and [Rust Fuzz Book](https://rust-fuzz.github.io/book/cargo-fuzz.html), nightly-only compiler instrumentation and libFuzzer usage.
+
+## Verified CI snapshot
+
+- PR source tested: `1d174265ff6c016256938db191d0332f922764bb`; merged source at `bb6d948203e3e1efd2a67644f2bd132159749e8d`.
+- [GitHub Actions run #15](https://github.com/pskeffington/rusti_rc/actions/runs/40440406547): **10/10 succeeded**.
+- Host unit tests and standalone CLI smoke: Ubuntu 22.04, macOS 14 and Windows Server 2022, each using Rust 1.70.0 and stable.
+- Compile-only checks (`cargo check`): ARMv6 GNU hardfloat, ARMv7 GNU hardfloat, ARM64 GNU, x86_64 musl.
+- Cross-target `cargo check` does **not** link executables, boot devices, verify ABI/glibc, crypto providers or TLS; legacy targets remain unverified.
+- No cargo-fuzz/sanitizer execution, no actual network operation or real-device test occurred in this run.
 
 ## Remaining G1b work before "complete"
 
