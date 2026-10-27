@@ -7,6 +7,7 @@
 
 pub mod cap;
 pub mod decoder;
+pub mod registration;
 pub mod tags;
 
 /// RFC 1459 / RFC 2812 line ceiling, including CRLF.
