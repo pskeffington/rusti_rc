@@ -1,0 +1,10 @@
+[package]
+name = "rusti-testkit"
+description = "Deterministic offline test fixtures for the IRC scaffold"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+rusti-proto = { path = "../rusti-proto" }
