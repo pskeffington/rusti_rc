@@ -34,6 +34,11 @@ For an unfamiliar task, start with the matching route in the JSON index and then
 ## Reproducible checks (from repository root)
 
 ```sh
+# Reproducible formatting gate (read-only checks, pinned toolchain)
+cargo +1.90.0 fmt --all --manifest-path Cargo.toml -- --check
+cargo +1.90.0 fmt --all --manifest-path net/Cargo.toml -- --check
+cargo +1.90.0 fmt --all --manifest-path fuzz/Cargo.toml -- --check
+
 # Portable Rust 1.70/stable workspace (no network)
 cargo test --workspace --all-targets
 
