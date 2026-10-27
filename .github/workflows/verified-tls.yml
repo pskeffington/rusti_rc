@@ -46,17 +46,10 @@ jobs:
           rustc +stable --version
       - name: Verify isolated TLS crate and certificate rejection tests
         shell: bash
-        run: cargo +stable test --manifest-path net/Cargo.toml --all-targets
-      - name: Capture public Cargo.lock for reproducible resolution
-        if: matrix.os == 'ubuntu-22.04'
-        shell: bash
-        run: |
-          echo 'RUSTI_NETWORK_LOCK_BEGIN'
-          cat net/Cargo.lock
-          echo 'RUSTI_NETWORK_LOCK_END'
+        run: cargo +stable test --manifest-path net/Cargo.toml --all-targets --locked
       - name: Lint TLS workspace
         shell: bash
-        run: cargo +stable clippy --manifest-path net/Cargo.toml --all-targets -- -D warnings
+        run: cargo +stable clippy --manifest-path net/Cargo.toml --all-targets --locked -- -D warnings
 
   # Source-only protocol still uses the independent Rust 1.70 root workflow.
   # This TLS workflow does not grant credentials, deploy binaries, create
