@@ -6,6 +6,8 @@
 //! Successful writes are submitted/unconfirmed, not delivery receipts.
 #![forbid(unsafe_code)]
 
+mod registration;
+
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::sync::Arc;
@@ -14,6 +16,7 @@ use std::time::{Duration, Instant};
 use rusti_client::{ClientConfig, ClientError};
 use rusti_proto::decoder::FrameDecoder;
 use rusti_proto::{cap::CAP_LS_302, encode_privmsg, FrameError, ParsedMessage};
+use rusti_proto::registration::{RegistrationError, RegistrationFlow};
 use rustls::pki_types::ServerName;
 use rustls::{ClientConnection, RootCertStore, StreamOwned};
 
@@ -33,6 +36,11 @@ pub enum TransportError {
     Io(io::Error),
     Tls(rustls::Error),
     Frame(FrameError),
+    Registration(RegistrationError),
+    RegistrationTimedOut,
+    RegistrationAlreadyAttempted,
+    RegistrationResponseOverflow,
+    NotRegistered,
 }
 
 impl From<io::Error> for TransportError {
@@ -43,6 +51,9 @@ impl From<rustls::Error> for TransportError {
 }
 impl From<FrameError> for TransportError {
     fn from(value: FrameError) -> Self { Self::Frame(value) }
+}
+impl From<RegistrationError> for TransportError {
+    fn from(value: RegistrationError) -> Self { Self::Registration(value) }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -150,6 +161,9 @@ pub enum Receive {
 pub struct TlsIrcSession {
     stream: StreamOwned<ClientConnection, TcpStream>,
     decoder: FrameDecoder,
+    registered: bool,
+    registration_attempted: bool,
+    registration: Option<RegistrationFlow>,
 }
 
 impl TlsIrcSession {
@@ -177,7 +191,13 @@ impl TlsIrcSession {
         handshake(&mut conn, &mut tcp, timeouts.tls_handshake)?;
         tcp.set_read_timeout(Some(timeouts.io))?;
         tcp.set_write_timeout(Some(timeouts.io))?;
-        Ok(Self { stream: StreamOwned::new(conn, tcp), decoder: FrameDecoder::new() })
+        Ok(Self {
+            stream: StreamOwned::new(conn, tcp),
+            decoder: FrameDecoder::new(),
+            registered: false,
+            registration_attempted: false,
+            registration: None,
+        })
     }
 
     fn write_frame(&mut self, frame: &str) -> Result<Submission, TransportError> {
@@ -214,13 +234,20 @@ impl TlsIrcSession {
         {
             return Err(TransportError::InvalidIdentifier);
         }
+        if !self.registered {
+            return Err(TransportError::NotRegistered);
+        }
         self.write_frame(&format!("JOIN {}\r\n", channel))
     }
 
     pub fn send_privmsg(
         &mut self, target: &str, body: &str,
     ) -> Result<Submission, TransportError> {
-        self.write_frame(&encode_privmsg(target, body)?)
+        let wire = encode_privmsg(target, body)?;
+        if !self.registered {
+            return Err(TransportError::NotRegistered);
+        }
+        self.write_frame(&wire)
     }
 
     pub fn pong(&mut self, token: &str) -> Result<Submission, TransportError> {
@@ -241,17 +268,55 @@ impl TlsIrcSession {
         let mut chunk = [0u8; IO_CHUNK];
         match self.stream.read(&mut chunk) {
             Ok(0) => {
+                self.registered = false;
+                self.registration = None;
                 self.decoder.finish()?;
                 Ok(Receive::Closed)
             }
             Ok(n) => {
-                self.decoder.push(&chunk[..n], on_frame);
+                let mut on_frame = on_frame;
+                let mut error: Option<TransportError> = None;
+                let registration = &mut self.registration;
+                self.decoder.push(&chunk[..n], |event| {
+                    if error.is_some() {
+                        return;
+                    }
+                    match &event {
+                        Err(frame_error) => {
+                            error = Some(TransportError::Frame(*frame_error));
+                            return;
+                        }
+                        Ok(frame) => {
+                            if let Some(flow) = registration.as_mut() {
+                                if (frame.command.eq_ignore_ascii_case("CAP")
+                                    || frame.command.eq_ignore_ascii_case("ERROR"))
+                                    && flow.observe(frame).is_err()
+                                {
+                                    error = Some(TransportError::Registration(
+                                        RegistrationError::RejectedByServer,
+                                    ));
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    on_frame(event);
+                });
+                if let Some(failure) = error {
+                    self.registered = false;
+                    self.registration = None;
+                    return Err(failure);
+                }
                 Ok(Receive::Data(n))
             }
             Err(e) if matches!(e.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut) => {
                 Ok(Receive::TimedOut)
             }
-            Err(e) => Err(TransportError::Io(e)),
+            Err(e) => {
+                self.registered = false;
+                self.registration = None;
+                Err(TransportError::Io(e))
+            },
         }
     }
 }
