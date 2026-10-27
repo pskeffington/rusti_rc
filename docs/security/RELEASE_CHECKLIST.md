@@ -10,7 +10,7 @@ Status: proposed acceptance criteria. **There are no releases or verified hardwa
 | Lock + provenance | Cargo-generated lockfiles committed, builds with `--locked`, SBOM, compiler/sysroot digest and source SHA captured | Separate net/Cargo.lock pinned with 66 packages; locked TLS CI 3/3 PASSED; release SBOM/provenance NOT DONE |
 | Supply chain | RustSec/cargo-deny and CI action pin reviews; findings triaged | NOT DONE |
 | Parser security | Fuzz, memory limits, tag/CTCP/Unicode/control tests | Bounded decoder, tags, CAP and deterministic tests passed in CI; fuzz harness not executed; protocol audit NOT DONE |
-| TLS identity | Modern rustls provider selected; TLS 1.2/1.3, SAN validation, expired/revoked CA, no downgrade | NOT DONE |
+| TLS identity | Modern rustls provider selected; TLS 1.2/1.3, SAN validation, expired/revoked CA, no downgrade | Local wrong-name/untrusted-root/expired/future leaf tests passed; CRL/OCSP/revocation, enterprise CA and hardware acceptance NOT DONE |
 | Auth/secrets | SASL policy, OS-backed credentials, redacted logs, compartmentalized trust roots | No SASL/password path in G2b; secure credential provisioning NOT DONE |
 | Authorization | IRC nick never yields authenticated Rust Boy/Vault/organizational access | Source boundary authored, integration NOT DONE |
 | Server safety | Default disabled, loopback-only unless approved, flood control and no public bind | Policy stub only |
