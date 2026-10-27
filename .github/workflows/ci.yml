@@ -1,0 +1,37 @@
+name: Portable Rust scaffold
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    name: ${{ matrix.os }} / Rust ${{ matrix.toolchain }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+        toolchain: ["1.70.0", stable]
+    steps:
+      - name: Checkout exact repository revision
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install Rust toolchain
+        shell: bash
+        run: rustup toolchain install "${{ matrix.toolchain }}" --profile minimal
+      - name: Offline, dependency-free scaffold tests
+        shell: bash
+        run: cargo +${{ matrix.toolchain }} test --workspace --all-targets
+      - name: Offline CLI smoke
+        shell: bash
+        run: cargo +${{ matrix.toolchain }} run -p rusti-standalone-cli
+
+  # Deliberately no publish, deploy, release, key material, or network listener job.
+  # Add signed artifact / target hardware gates only after security review.
