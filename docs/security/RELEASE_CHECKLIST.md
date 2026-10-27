@@ -7,7 +7,7 @@ Status: proposed acceptance criteria. **There are no releases or verified hardwa
 | Code review | Two-person security review of parser, adapter, transport, config and updater changes | NOT DONE |
 | License | Repository license approved; upstream licenses and notices reviewed | NOT DONE |
 | MSRV | Rust 1.70 (portable core) and stable build/test, 2021 edition retained | [10/10 PR checks pass](https://github.com/pskeffington/rusti_rc/actions/runs/40440406547); OS/hardware release support not verified |
-| Lock + provenance | Cargo-generated lockfiles committed, builds with `--locked`, SBOM, compiler/sysroot digest and source SHA captured | Separate net/Cargo.lock pinned with 66 packages; locked CI awaiting final validation; release SBOM/provenance NOT DONE |
+| Lock + provenance | Cargo-generated lockfiles committed, builds with `--locked`, SBOM, compiler/sysroot digest and source SHA captured | Separate net/Cargo.lock pinned with 66 packages; locked TLS CI 3/3 PASSED; release SBOM/provenance NOT DONE |
 | Supply chain | RustSec/cargo-deny and CI action pin reviews; findings triaged | NOT DONE |
 | Parser security | Fuzz, memory limits, tag/CTCP/Unicode/control tests | Bounded decoder, tags, CAP and deterministic tests passed in CI; fuzz harness not executed; protocol audit NOT DONE |
 | TLS identity | Modern rustls provider selected; TLS 1.2/1.3, SAN validation, expired/revoked CA, no downgrade | NOT DONE |
