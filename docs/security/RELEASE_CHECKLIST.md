@@ -5,13 +5,14 @@ Status: proposed acceptance criteria. **There are no releases or verified hardwa
 | Gate | Required evidence | Current state |
 |---|---|---|
 | Code review | Two-person security review of parser, adapter, transport, config and updater changes | NOT DONE |
-| License | Repository license approved; upstream licenses and notices reviewed | NOT DONE |
-| MSRV | Rust 1.70 (portable core) and stable build/test, 2021 edition retained | [10/10 PR checks pass](https://github.com/pskeffington/rusti_rc/actions/runs/40440406547); OS/hardware release support not verified |
-| Lock + provenance | Cargo-generated lockfiles committed, builds with `--locked`, SBOM, compiler/sysroot digest and source SHA captured | Separate net/Cargo.lock pinned with 66 packages; locked TLS CI 3/3 PASSED; release SBOM/provenance NOT DONE |
+| License | Repository license approved; upstream licenses and notices reviewed | MIT license recorded; third-party license notice review pending |
+| MSRV | Rust 1.70 (portable core) and stable build/test, 2021 edition retained | [G2c portable checks 10/10](https://github.com/pskeffington/rusti_rc/actions/runs/40444811629); OS/hardware release support not verified |
+| Lock + provenance | Cargo-generated lockfiles committed, builds with `--locked`, SBOM, compiler/sysroot digest and source SHA captured | Separate net/Cargo.lock pinned with 66 packages; [G2c locked TLS CI 3/3](https://github.com/pskeffington/rusti_rc/actions/runs/40444811587) PASSED; release SBOM/provenance NOT DONE |
 | Supply chain | RustSec/cargo-deny and CI action pin reviews; findings triaged | NOT DONE |
 | Parser security | Fuzz, memory limits, tag/CTCP/Unicode/control tests | Bounded decoder, tags, CAP and deterministic tests passed in CI; fuzz harness not executed; protocol audit NOT DONE |
 | TLS identity | Modern rustls provider selected; TLS 1.2/1.3, SAN validation, expired/revoked CA, no downgrade | Local wrong-name/untrusted-root/expired/future leaf tests passed; CRL/OCSP/revocation, enterprise CA and hardware acceptance NOT DONE |
-| Auth/secrets | SASL policy, OS-backed credentials, redacted logs, compartmentalized trust roots | No SASL/password path in G2b; secure credential provisioning NOT DONE |
+| Auth/secrets | SASL policy, OS-backed credentials, redacted logs, compartmentalized trust roots | G2c redacted, hostname/port-bound credential references added; protected OS store, SASL and rotation NOT DONE |
+| IRCd interoperability | TLS CAP, registration, JOIN and channel chat against independently built IRCd | [Ergo 2.19.1 digest-pinned CI 1/1 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40444811673); second IRCd and stress tests pending |
 | Authorization | IRC nick never yields authenticated Rust Boy/Vault/organizational access | Source boundary authored, integration NOT DONE |
 | Server safety | Default disabled, loopback-only unless approved, flood control and no public bind | Policy stub only |
 | Target builds | x86 Linux, ARMv6/v7/ARM64, Intel/ARM Mac, Windows supported OS targets compiled | ARMv6/v7/ARM64 + musl source-only checks passed; actual target linking/runtime NOT DONE |
