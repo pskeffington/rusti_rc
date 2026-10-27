@@ -1,4 +1,8 @@
-//! Rust IRC client policy boundary; no socket implementation in this scaffold.
+//! Portable Rust 1.70 client policy and credential-reference boundaries.
+//!
+//! Holds disabled-by-default endpoint policy and explicit retry decisions;
+//! it never opens sockets or resolves secrets. The separate `net/` workspace
+//! implements opt-in TLS sessions and optional native desktop keychain access.
 #![forbid(unsafe_code)]
 
 pub mod recovery;
