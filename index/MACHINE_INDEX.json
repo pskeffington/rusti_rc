@@ -4,8 +4,8 @@
   "generator": "scripts/repo_index.py",
   "counts": {
     "modules": 14,
-    "routes": 13,
-    "files": 79,
+    "routes": 14,
+    "files": 80,
     "documents": 25
   },
   "modules": [
@@ -45,11 +45,12 @@
       "prefix": "crates/rusti-client/",
       "kind": "portable-rust",
       "maturity": "tested-development",
-      "summary": "Disabled connection policy, recovery decisions, and server-bound opaque credential references.",
+      "summary": "Disabled-by-default IRC policy, finite recovery, credential references and a bounded RAM-only operator draft outbox.",
       "entrypoints": [
         "crates/rusti-client/src/lib.rs",
         "crates/rusti-client/src/recovery.rs",
-        "crates/rusti-client/src/credential_ref.rs"
+        "crates/rusti-client/src/credential_ref.rs",
+        "crates/rusti-client/src/outbox.rs"
       ],
       "docs": [
         "docs/architecture/G2B_REGISTRATION_RECOVERY.md",
@@ -393,12 +394,13 @@
       "prefix": "net/",
       "kind": "separate-modern-rust-workspace",
       "maturity": "tested-development-not-production",
-      "summary": "Explicit certificate-verified IRC over TLS; SASL, optional desktop keychain, cancellation and independent IRCd tests.",
+      "summary": "Explicit verified TLS IRC, opt-in SASL, desktop keychain and G3b operator-confirmed send/EOF discard; no delivery receipt.",
       "entrypoints": [
         "net/src/lib.rs",
         "net/src/registration.rs",
         "net/src/sasl.rs",
-        "net/src/native_store.rs"
+        "net/src/native_store.rs",
+        "net/src/operator.rs"
       ],
       "docs": [
         "net/README.md",
@@ -422,6 +424,7 @@
         "net/src/cancel.rs",
         "net/src/lib.rs",
         "net/src/native_store.rs",
+        "net/src/operator.rs",
         "net/src/registration.rs",
         "net/src/sasl.rs",
         "net/tests/bootstrap_ergo_account.py",
@@ -531,6 +534,23 @@
         "scripts/verify_offline_bundle_lab.py",
         "deployment/release-manifest.schema.json",
         "docs/deployment/OFFLINE_REDEPLOYMENT_RUNBOOK.md"
+      ]
+    },
+    {
+      "id": "operator-chat",
+      "terms": [
+        "operator chat",
+        "outbox",
+        "message queue",
+        "confirmed send",
+        "disconnected",
+        "no replay"
+      ],
+      "primary": "net/src/operator.rs",
+      "related": [
+        "crates/rusti-client/src/outbox.rs",
+        "net/tests/registration_loopback.rs",
+        "docs/integration/RUST_BOY_ADAPTER_CONTRACT.md"
       ]
     },
     {
@@ -986,6 +1006,11 @@
     },
     {
       "path": "net/src/native_store.rs",
+      "module": "tls-transport",
+      "kind": "rust-source"
+    },
+    {
+      "path": "net/src/operator.rs",
       "module": "tls-transport",
       "kind": "rust-source"
     },
