@@ -50,17 +50,10 @@ class RepositoryIndexTests(unittest.TestCase):
                 with self.assertRaises(idx.IndexProblem):
                     idx.safe_path(path)
 
-    def test_doc_heading_extraction_excludes_fenced_spoofed_headings(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            (root / "fixture.md").write_text(
-                "# Real\n\n## Confirmed\n\n" + chr(96) * 3 +
-                "\n# Bogus\n## Wrong\n" + chr(96) * 3 + "\n## Verified\n",
-                encoding="utf-8",
-            )
-            title, sections = idx.headings(root, "fixture.md")
-            self.assertEqual(title, "Real")
-            self.assertEqual(sections, ["Confirmed", "Verified"])
+    def test_document_labels_derive_from_paths_not_untrusted_content(self):
+        self.assertEqual(idx.doc_title("docs/security/THREAT_MODEL.md"), "THREAT MODEL")
+        self.assertEqual(idx.doc_title("docs/INDEX.md"), "Repository navigation")
+        self.assertEqual(idx.doc_title("net/README.md"), "README")
 
     def test_missing_or_moved_route_file_refuses_index(self):
         changed = copy.deepcopy(self.catalog)
