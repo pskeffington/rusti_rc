@@ -240,10 +240,10 @@ mod tests {
     #[test]
     fn plain_base64_matches_rfc_vector_and_zeroizes_buffers() {
         let raw = b"\0Alice\0secret";
-        assert_eq!(&*encode_base64(raw), b"AEFsaWNlAHNlY3JldA==");
-        assert_eq!(&*encode_base64(b""), b"");
-        assert_eq!(&*encode_base64(b"\0"), b"AA==");
-        assert_eq!(&*encode_base64(b"\0\0"), b"AAA=");
+        assert_eq!(encode_base64(raw).as_slice(), b"AEFsaWNlAHNlY3JldA==");
+        assert_eq!(encode_base64(b"").as_slice(), b"");
+        assert_eq!(encode_base64(b"\0").as_slice(), b"AA==");
+        assert_eq!(encode_base64(b"\0\0").as_slice(), b"AAA=");
     }
 
     #[test]
