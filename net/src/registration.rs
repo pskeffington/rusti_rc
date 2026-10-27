@@ -1,7 +1,8 @@
-//! Explicit IRC registration over an already authenticated TLS stream.
+//! Explicit anonymous IRC CAP registration over a verified TLS stream.
 //!
-//! No background connection, silent credentials, timer task, or auto retry.
-//! A welcome numeric is a server protocol event, NOT Rust Boy authorization.
+//! Authenticated SASL PLAIN registration is a separate opt-in path in sasl.rs.
+//! No background connection, secret lookup, timer task, or automatic retry.
+//! A server welcome is never Rust Boy organizational authorization.
 #![forbid(unsafe_code)]
 
 use std::time::{Duration, Instant};
