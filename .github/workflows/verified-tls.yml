@@ -44,15 +44,6 @@ jobs:
           rustup toolchain install stable --profile minimal --component clippy --component rustfmt
           cargo +stable --version
           rustc +stable --version
-      - name: Resolve dependency graph for G2d pinned TLS and native keyring
-        shell: bash
-        run: |
-          cargo +stable generate-lockfile --manifest-path net/Cargo.toml
-          if [ "${{ matrix.os }}" = "ubuntu-22.04" ]; then
-            echo 'RUSTI_G2D_LOCK_BEGIN'
-            cat net/Cargo.lock
-            echo 'RUSTI_G2D_LOCK_END'
-          fi
       - name: Verify isolated TLS crate and certificate rejection tests
         shell: bash
         run: cargo +stable test --manifest-path net/Cargo.toml --all-targets --locked
