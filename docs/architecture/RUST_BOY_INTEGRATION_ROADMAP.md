@@ -1,6 +1,6 @@
 # rusti_rc architecture and Rust Boy integration gates
 
-Baseline: 2026-10-26. **Current status: offline scaffold committed; live IRC/TLS and Rust Boy import not implemented.** This roadmap describes proposed capabilities and gates, not verified functionality.
+Baseline: 2026-10-26. **Current status: standalone TLS IRC and synthetic SASL authentication tests pass; Rust Boy import and field deployment remain unimplemented.** This roadmap describes proposed capabilities and gates, not verified functionality.
 
 ## Module and trust boundaries
 
