@@ -14,6 +14,7 @@ Start with [AGENTS.md](../AGENTS.md) for agent safety rules, [README](../README.
 | raspberry pi, armv6, armv7 | [docs/deployment/LEGACY_COMPATIBILITY.md](../docs/deployment/LEGACY_COMPATIBILITY.md) | [scripts/legacy_host_preflight.sh](../scripts/legacy_host_preflight.sh) |
 | irc frame, ircv3, decoder | [crates/rusti-proto/src/lib.rs](../crates/rusti-proto/src/lib.rs) | [crates/rusti-proto/src/decoder.rs](../crates/rusti-proto/src/decoder.rs) |
 | server, listener, lan server | [crates/rusti-server/src/lib.rs](../crates/rusti-server/src/lib.rs) | [docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md](../docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md) |
+| machine indexing, index, source lookup | [scripts/repo_index.py](../scripts/repo_index.py) | [index/MACHINE_INDEX.json](../index/MACHINE_INDEX.json) |
 | offline install, bundle, signature | [docs/deployment/G2G_SIGNED_BUNDLE_LAB.md](../docs/deployment/G2G_SIGNED_BUNDLE_LAB.md) | [scripts/verify_offline_bundle_lab.py](../scripts/verify_offline_bundle_lab.py) |
 | registration, capability negotiation, cap 302 | [crates/rusti-proto/src/registration.rs](../crates/rusti-proto/src/registration.rs) | [net/src/registration.rs](../net/src/registration.rs) |
 | rust boy, pip boy, link ui | [docs/integration/RUST_BOY_ADAPTER_CONTRACT.md](../docs/integration/RUST_BOY_ADAPTER_CONTRACT.md) | [crates/rusti-adapter/src/lib.rs](../crates/rusti-adapter/src/lib.rs) |
@@ -102,5 +103,6 @@ From the repository root:
     python3 scripts/repo_index.py --write
     python3 scripts/repo_index.py --check
     python3 scripts/repo_index.py --query 'SASL authentication'
+    python3 scripts/repo_index.py --path net/src/sasl.rs
 
 CI rejects stale output, missing links in curated routes, unindexed directories, and sensitive file extensions. The index is a navigation aid, never a security approval.
