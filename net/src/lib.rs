@@ -8,6 +8,8 @@
 
 mod registration;
 mod sasl;
+#[cfg(feature = "os-keyring")]
+pub mod native_store;
 mod sasl;
 
 use std::io::{self, Read, Write};
