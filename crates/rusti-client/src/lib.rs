@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 
 pub mod recovery;
+pub mod credential_ref;
 
 use std::net::IpAddr;
 
