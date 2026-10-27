@@ -12,12 +12,12 @@
 ## Offline-only test on a development machine
 
 ```sh
-cargo +stable test --manifest-path net/Cargo.toml --all-targets
-cargo +stable clippy --manifest-path net/Cargo.toml --all-targets -- -D warnings
+cargo +stable test --manifest-path net/Cargo.toml --all-targets --locked
+cargo +stable clippy --manifest-path net/Cargo.toml --all-targets --locked -- -D warnings
 cargo +1.70.0 test --workspace --all-targets
 ```
 
-The first run needs crates.io access to obtain the approved dependencies. After a Cargo-generated `net/Cargo.lock` is committed, builds can use `--locked` with a vendor cache. **No release lockfile, SBOM, signature or offline vendor bundle is yet committed.**
+The first run needs crates.io access to obtain the approved dependencies. The Cargo-generated **`net/Cargo.lock` is committed** with 66 resolved packages from the GitHub Ubuntu test job, and CI now uses `--locked`. This pins dependency resolution, but a complete SBOM, security advisory/license audit, release signature, and offline vendor bundle have **not** been produced.
 
 ## Legacy OS / ARM policy
 
