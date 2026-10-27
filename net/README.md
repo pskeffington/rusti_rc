@@ -31,6 +31,8 @@ Do not use the current transport for clinical records, safety-of-life messaging,
 - Full IRC registration/CAP state handling and independent IRCd integration.
 - Trust-root enrollment and rotation, credential handling and SASL where justified, plus certificate expiry and MITM coverage.
 - Security and license audit, vulnerabilities/SBOM, and hardening against slow peers and reconnect floods. Cargo.lock is already pinned.
+- Independent [Ergo IRCd interoperability test](tests/ergo_interop.rs) in the [isolated Docker CI workflow](../.github/workflows/ergo-interop.yml); read [G2c evidence](../docs/architecture/G2C_INDEPENDENT_IRCD_CREDENTIALS.md).
+- A protected OS credential provider; the portable [CredentialRef](../crates/rusti-client/src/credential_ref.rs) is only an opaque key-store reference, not a secret backend or SASL implementation.
 - Actual Pi/older host hardware tests and signed offline redeployment.
 - Optional, feature-gated Rust Boy LINK import only after verified integration acceptance.
 
