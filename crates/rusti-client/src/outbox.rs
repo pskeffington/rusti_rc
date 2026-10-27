@@ -217,11 +217,26 @@ mod tests {
         assert!(box_.is_empty());
         assert_eq!(box_.queued_wire_bytes(), 0);
         assert!(OutboxLimits::default().validate());
-        assert!(!OutboxLimits { max_messages: 0, max_wire_bytes: 512 }.validate());
-        assert!(!OutboxLimits { max_messages: 65, max_wire_bytes: 512 }.validate());
-        assert!(!OutboxLimits { max_messages: 1, max_wire_bytes: 32769 }.validate());
+        assert!(!OutboxLimits {
+            max_messages: 0,
+            max_wire_bytes: 512
+        }
+        .validate());
+        assert!(!OutboxLimits {
+            max_messages: 65,
+            max_wire_bytes: 512
+        }
+        .validate());
+        assert!(!OutboxLimits {
+            max_messages: 1,
+            max_wire_bytes: 32769
+        }
+        .validate());
         assert!(matches!(
-            OperatorOutbox::new(OutboxLimits { max_messages: 0, max_wire_bytes: 512 }),
+            OperatorOutbox::new(OutboxLimits {
+                max_messages: 0,
+                max_wire_bytes: 512
+            }),
             Err(OutboxError::InvalidLimits)
         ));
     }
@@ -250,14 +265,19 @@ mod tests {
         let mut count_box = OperatorOutbox::new(OutboxLimits {
             max_messages: 1,
             max_wire_bytes: 4096,
-        }).unwrap();
+        })
+        .unwrap();
         count_box.queue_draft("#ops", "first").unwrap();
-        assert_eq!(count_box.queue_draft("#ops", "second"), Err(OutboxError::QueueFull));
+        assert_eq!(
+            count_box.queue_draft("#ops", "second"),
+            Err(OutboxError::QueueFull)
+        );
 
         let mut byte_box = OperatorOutbox::new(OutboxLimits {
             max_messages: 4,
             max_wire_bytes: 512,
-        }).unwrap();
+        })
+        .unwrap();
         let id = byte_box.queue_draft("#ops", &"a".repeat(280)).unwrap();
         assert_eq!(id, DraftId(1));
         assert_eq!(
