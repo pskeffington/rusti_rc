@@ -46,6 +46,7 @@ python3 scripts/repo_index.py --write
 python3 scripts/repo_index.py --check
 python3 -m unittest discover -s scripts/tests -p 'test_repo_index.py' -v
 python3 scripts/repo_index.py --query 'SASL authentication'
+python3 scripts/repo_index.py --path net/src/sasl.rs
 ```
 
 The index check runs on every PR in GitHub Actions and rejects stale outputs, dangling curated links, unowned directories and secret-like paths. Add a new module to `index/catalog.json` before claiming it is indexed. Never bypass a failing gate simply to merge.

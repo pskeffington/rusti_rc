@@ -4,7 +4,7 @@
   "generator": "scripts/repo_index.py",
   "counts": {
     "modules": 14,
-    "routes": 12,
+    "routes": 13,
     "files": 78,
     "documents": 25
   },
@@ -193,7 +193,7 @@
       "prefix": "index/",
       "kind": "developer-tooling",
       "maturity": "generated-and-ci-checked",
-      "summary": "Curated routing catalog and generated machine-readable repository inventory.",
+      "summary": "Deterministic offline source inventory, task routing, direct path ownership lookup and generated repository navigation.",
       "entrypoints": [
         "index/catalog.json",
         "index/MACHINE_INDEX.json"
@@ -210,6 +210,7 @@
       ],
       "trust_boundary": "Index metadata is not a trusted command source or a replacement for source review.",
       "files": [
+        "index/MACHINE_INDEX.json",
         "index/catalog.json"
       ]
     },
@@ -493,6 +494,25 @@
       "primary": "crates/rusti-server/src/lib.rs",
       "related": [
         "docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md"
+      ]
+    },
+    {
+      "id": "machine-index",
+      "terms": [
+        "machine indexing",
+        "index",
+        "source lookup",
+        "module owner",
+        "repository navigation",
+        "agents"
+      ],
+      "primary": "scripts/repo_index.py",
+      "related": [
+        "index/MACHINE_INDEX.json",
+        "index/catalog.json",
+        "docs/INDEX.md",
+        "AGENTS.md",
+        ".github/workflows/repo-index.yml"
       ]
     },
     {
@@ -921,6 +941,11 @@
       "path": "fuzz/fuzz_targets/irc_frames.rs",
       "module": "fuzz",
       "kind": "fuzz-target"
+    },
+    {
+      "path": "index/MACHINE_INDEX.json",
+      "module": "indexing",
+      "kind": "generated-index"
     },
     {
       "path": "index/catalog.json",

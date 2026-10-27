@@ -37,10 +37,11 @@ These root-workspace commands do **not** connect to IRC. No third-party crates a
 
 Start with [AGENTS.md](AGENTS.md) for agent-safe development guidance and [docs/INDEX.md](docs/INDEX.md) for the generated human-readable repository map. [index/MACHINE_INDEX.json](index/MACHINE_INDEX.json) is the compact, versioned machine inventory: stable file paths, module ownership, release maturity, trust boundaries, and task-to-source routes. [index/catalog.json](index/catalog.json) is the authoritative curated routing source.
 
-Indexing is **offline and metadata-only** (no embeddings, external crawler, secrets, or duplicated source bodies). Every PR runs a drift check. Adding a module or moving an entrypoint requires a catalog update.
+Indexing is **offline and metadata-only** (no embeddings, external crawler, secrets, or duplicated source bodies). The generated inventory includes its own entry, and every file is assigned to one owner. Task lookups rank curated routes; exact path lookup returns the owning module and its trust boundary. Every PR checks drift. Stage newly created files before regeneration, then update the catalog when adding a module or changing ownership.
 
 ```sh
 python3 scripts/repo_index.py --query 'SASL authentication'
+python3 scripts/repo_index.py --path net/src/sasl.rs
 python3 scripts/repo_index.py --write
 python3 scripts/repo_index.py --check
 ```

@@ -1,6 +1,6 @@
 # Offline package metadata scaffold
 
-The [candidate JSON Schema](release-manifest.schema.json) is a *data-shape proposal only*. No rusti_rc release payload, signature, trust-root verifier, installer or updater exists yet.
+The [candidate JSON Schema](release-manifest.schema.json) is a *data-shape proposal only*. No production rusti_rc release payload, signer, hardware-protected trust-root verifier, installer or updater exists yet. The [G2g-A laboratory verifier](../docs/deployment/G2G_SIGNED_BUNDLE_LAB.md) checks synthetic signed manifests and payloads but cannot install or approve a release.
 
 ## Required verification order
 

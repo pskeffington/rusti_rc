@@ -28,8 +28,8 @@ See [PACE](https://github.com/pskeffington/pip_boy/blob/main/docs/PACE_MESSAGING
 ## Feature gate and tests
 
 G0 standalone parser, adapter and lab fixtures; no host modifications — **scaffolded**.
-G1 separate TLS-backed client and IRCv3 CAP/SASL tests — **pending**.
-G2 source audits, transport injection/MITM cases, real Linux/ARM smoke — **pending**.
+G1 standalone TLS-backed IRC client, IRCv3 CAP/SASL and independent synthetic-account Ergo interoperability — **validated in standalone tests; Rust Boy import not implemented**.
+G2 verified-TLS localhost rejection tests and certificate-bound credentials — **partially tested**; independent audits, OS keychain lifecycle and real Linux/ARM smoke **pending**.
 G3 optional `pipboy` crate dependency + read-only LINK fixture integration — **pending**.
 G4 explicit network send UI, bounded connection state, real interoperable server and desktop/micro screen tests — **pending**.
 G5 signed dual-target offline redeploy and security review — **pending**.
