@@ -56,13 +56,13 @@ jobs:
           # Ergo's container runs as a nonroot service account.
           chmod 644 "${lab_dir}/leaf.key" "${lab_dir}/fullchain.pem"
 
-      - name: Start pinned-version independent Ergo IRCd
+      - name: Start immutable-digest-pinned Ergo IRCd v2.19.1
         shell: bash
         run: |
           set -euo pipefail
-          docker pull ghcr.io/ergochat/ergo:v2.19.1
-          docker image inspect ghcr.io/ergochat/ergo:v2.19.1             --format 'Ergo image digest: {{index .RepoDigests 0}}'
-          docker run --init --name rusti-ergo -d             -p 127.0.0.1:16697:6697             ghcr.io/ergochat/ergo:v2.19.1
+          docker pull ghcr.io/ergochat/ergo@sha256:ef885e44f7fa19101bbbc41baef11dc280dc8107465dccaf6f0860f41b48a682
+          docker image inspect ghcr.io/ergochat/ergo@sha256:ef885e44f7fa19101bbbc41baef11dc280dc8107465dccaf6f0860f41b48a682             --format 'Ergo image digest: {{index .RepoDigests 0}}'
+          docker run --init --name rusti-ergo -d             -p 127.0.0.1:16697:6697             ghcr.io/ergochat/ergo@sha256:ef885e44f7fa19101bbbc41baef11dc280dc8107465dccaf6f0860f41b48a682
           for attempt in $(seq 1 30); do
             if docker cp rusti-ergo:/ircd/ircd.yaml "${RUSTI_ERGO_LAB_DIR}/ircd.yaml" 2>/dev/null; then
               break
