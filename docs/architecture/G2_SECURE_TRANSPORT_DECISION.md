@@ -39,6 +39,13 @@ Normative guidance: [RFC 9325](https://www.rfc-editor.org/rfc/rfc9325) (TLS >=1.
 - Hidden outbound contacts, credential logging, unbounded buffering/reconnect loops.
 - Calling a cross-compiled binary `supported` before a hardware test.
 
-## Implementation status and CI\n\n- Current source: [net/src/lib.rs](../../net/src/lib.rs), [synthetic certificate tests](../../net/tests/verified_tls_loopback.rs), [net README](../../net/README.md), [G2 evidence](../security/G2_TLS_IMPLEMENTATION_EVIDENCE.md).\n- Only explicit connect_tls can create a socket; it uses a supplied SocketAddr instead of DNS, validates server_host through rustls and rejects TLS-required=false.\n- This is synchronous/bounded I/O meant for a worker thread, not a UI event thread. Cancellation, automatic reconnect, credential storage and full IRCv3 orchestration are pending.\n- Tests are in GitHub Actions; do not claim production/legacy acceptance until test results and hardware evidence are reviewed.\n\n## Exit criteria
+## Implementation status and CI
+
+- Current source: [net/src/lib.rs](../../net/src/lib.rs), [synthetic certificate tests](../../net/tests/verified_tls_loopback.rs), [net README](../../net/README.md), [G2 evidence](../security/G2_TLS_IMPLEMENTATION_EVIDENCE.md).
+- Only explicit connect_tls can create a socket; it uses a supplied SocketAddr instead of DNS, validates server_host through rustls and rejects TLS-required=false.
+- This is synchronous/bounded I/O meant for a worker thread, not a UI event thread. Cancellation, automatic reconnect, credential storage and full IRCv3 orchestration are pending.
+- Tests are in GitHub Actions; do not claim production/legacy acceptance until test results and hardware evidence are reviewed.
+
+## Exit criteria
 
 Two offline-controlled test clients use authenticated TLS to an independently configured IRC server, successfully negotiate only allowlisted CAP behavior, show direct/channel chat state without false receipts, survive forced network loss with bounded reconnect, and demonstrably reject expired/wrong-name/untrusted certificates. Replay tests, signed bundle and supported target evidence remain separate release gates.
