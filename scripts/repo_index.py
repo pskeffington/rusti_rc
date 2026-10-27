@@ -204,11 +204,16 @@ def assemble(root, catalog, paths):
         for path in [route["primary"]] + route["related"]:
             if path not in known:
                 raise IndexProblem("dangling task-route reference: " + path)
+    # Assign each file once rather than rescanning the entire inventory for
+    # every module as the repository grows.
+    files_by_module = {m["id"]: [] for m in catalog["modules"]}
+    for entry in files:
+        files_by_module[entry["module"]].append(entry["path"])
     modules = []
-    for m in catalog["modules"]:
-        obj = dict(m)
-        obj["files"] = [f["path"] for f in files if f["module"] == m["id"]]
-        modules.append(obj)
+    for module in catalog["modules"]:
+        entry = dict(module)
+        entry["files"] = files_by_module[module["id"]]
+        modules.append(entry)
     modules.sort(key=lambda m: m["id"])
     return {
         "schema": SCHEMA,
