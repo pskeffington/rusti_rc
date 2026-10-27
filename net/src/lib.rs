@@ -290,12 +290,11 @@ impl TlsIrcSession {
                             if let Some(flow) = registration.as_mut() {
                                 if (frame.command.eq_ignore_ascii_case("CAP")
                                     || frame.command.eq_ignore_ascii_case("ERROR"))
-                                    && flow.observe(frame).is_err()
                                 {
-                                    error = Some(TransportError::Registration(
-                                        RegistrationError::RejectedByServer,
-                                    ));
-                                    return;
+                                    if let Err(reg_error) = flow.observe(frame) {
+                                        error = Some(TransportError::Registration(reg_error));
+                                        return;
+                                    }
                                 }
                             }
                         }
