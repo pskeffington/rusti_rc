@@ -18,7 +18,8 @@ Build a modular IRC stack, independently distributable for portable Linux and ol
 | [rusti-adapter](crates/rusti-adapter/src/lib.rs) | Untrusted read-only IRC chat framing for future Rust Boy import; no Vault/peer privileges |
 | [rusti-testkit](crates/rusti-testkit/src/lib.rs) | Synthetic offline wire fixtures |
 | [standalone-cli](examples/standalone-cli/src/main.rs) | Offline smoke test only, prints fixture result |
-| [TLS networking preview](net/README.md) | Separate modern rustls/ring workspace: explicit verified TLS connection, basic IRC commands and localhost certificate tests; no Rust Boy import |\n| [CI](.github/workflows/ci.yml) | [Run #15 passed 10/10 jobs](https://github.com/pskeffington/rusti_rc/actions/runs/40440406547): Rust 1.70/stable Linux/macOS/Windows tests; ARMv6/ARMv7/ARM64/musl source-only checks. Hardware/interoperability not validated |
+| [TLS networking preview](net/README.md) | Separate modern rustls/ring workspace: explicit verified TLS connection, basic IRC commands and localhost certificate tests; no Rust Boy import |
+| [CI](.github/workflows/ci.yml) | [Run #15 passed 10/10 jobs](https://github.com/pskeffington/rusti_rc/actions/runs/40440406547): Rust 1.70/stable Linux/macOS/Windows tests; ARMv6/ARMv7/ARM64/musl source-only checks. Hardware/interoperability not validated |
 
 ## Local scaffold test
 
@@ -38,7 +39,8 @@ These root-workspace commands do **not** connect to IRC. No third-party crates a
 - [Threat model](docs/security/THREAT_MODEL.md)
 - [Release acceptance checklist](docs/security/RELEASE_CHECKLIST.md)
 - [Rust Boy adapter contract](docs/integration/RUST_BOY_ADAPTER_CONTRACT.md)
-- [G2 secure TLS transport and legacy-target decision](docs/architecture/G2_SECURE_TRANSPORT_DECISION.md)\n- [G2 TLS source and test evidence](docs/security/G2_TLS_IMPLEMENTATION_EVIDENCE.md)
+- [G2 secure TLS transport and legacy-target decision](docs/architecture/G2_SECURE_TRANSPORT_DECISION.md)
+- [G2 TLS source and test evidence](docs/security/G2_TLS_IMPLEMENTATION_EVIDENCE.md)
 - [Architecture and phased development roadmap](docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md)
 - [G1b protocol implementation and pending evidence](docs/security/G1B_PROTOCOL_EVIDENCE.md)
 - [Nightly-only isolated fuzz harness](fuzz/README.md)
