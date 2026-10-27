@@ -41,6 +41,12 @@ jobs:
             | python3 -c 'import json,sys; x=json.load(sys.stdin); assert any(r["route"]=="sasl-account" for r in x["matches"])'
           python3 scripts/repo_index.py --query 'offline rollback signature' \
             | python3 -c 'import json,sys; x=json.load(sys.stdin); assert any(r["route"]=="offline-release" for r in x["matches"])'
+          python3 scripts/repo_index.py --query 'machine indexing' \
+            | python3 -c 'import json,sys; x=json.load(sys.stdin); assert x["matches"][0]["route"]=="machine-index"'
+          python3 scripts/repo_index.py --path net/src/sasl.rs \
+            | python3 -c 'import json,sys; x=json.load(sys.stdin); assert x["owner"]["id"]=="tls-transport"'
+          python3 scripts/repo_index.py --path index/MACHINE_INDEX.json \
+            | python3 -c 'import json,sys; x=json.load(sys.stdin); assert x["file"]["kind"]=="generated-index"'
 
   # No dependency install, indexing service, API credentials, embedded vectors,
   # remote crawler, generated public archive, or production IPC is involved.
