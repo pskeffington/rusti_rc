@@ -1,6 +1,6 @@
 # G2e — Independent SASL account acceptance and legacy credential boundary
 
-Status: **under CI review**, 2026-10-27. Laboratory evidence only; not an operational Rust Boy authorization or signed field release.
+Status: **G2e merged to main** via [PR #8](https://github.com/pskeffington/rusti_rc/pull/8), squash commit `dd29e02186db036120e2630461a1987a4fd03568`, 2026-10-27. Exact tested source head `df9047109edc26cd5c8290f85d0bb867d40609fe` passed [portable 10/10](https://github.com/pskeffington/rusti_rc/actions/runs/40448428217), [locked TLS 3/3](https://github.com/pskeffington/rusti_rc/actions/runs/40448428222) and [independent Ergo workflow 1/1](https://github.com/pskeffington/rusti_rc/actions/runs/40448428240). Laboratory evidence only; not Rust Boy authorization, native credential lifecycle acceptance or signed field release.
 
 ## Literature and engineering decisions
 
@@ -35,10 +35,10 @@ Raspberry Pi models cannot be assumed to provide an RTC, TPM2, Secure Boot, usab
 
 ## Acceptance gates
 
-- [ ] G2e portable Rust 1.70 and cross-target CI succeeds 10/10.
-- [ ] G2e modern TLS Linux/macOS/Windows tests and Clippy succeed 3/3.
-- [ ] Independent pinned Ergo accepts a test account's SASL 903, rejects bad credentials with 904-type failure, and refuses wrong-host credential lookup.
-- [ ] No operational secrets or password-derived traces enter CI logs.
+- [x] [G2e portable Rust 1.70/stable and ARM/musl compile-only checks 10/10 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40448428217).
+- [x] [G2e locked TLS tests/Clippy and native feature compile tests 3/3 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40448428222).
+- [x] [Pinned independent Ergo 1/1 job passed](https://github.com/pskeffington/rusti_rc/actions/runs/40448428240): 1 ordinary IRC channel test plus 3 real-account SASL tests (903 accepted, wrong-password rejection, wrong-host pre-secret policy).
+- [x] Reviewed G2e test fixture: only a publicly known synthetic account password on ephemeral, localhost TLS; test outputs use typed protocol events, not raw SASL payloads. This is a code/log-scope check, not an independent audit.
 - [ ] Run manual native keychain lifecycle tests with explicit local operator permission on macOS and Windows; record redacted evidence.
 - [ ] Test keychain lock/denial and rotation, and do not substitute a mock on an old Pi.
 - [ ] Validate future headless TPM/security provider on *real* hardware, signed bundle and A/B redeployment.
@@ -53,3 +53,9 @@ On a permissioned desktop workstation, from the repository root, execute:
 This creates and deletes only a unique synthetic keychain entry; it must not be run on shared CI, a service account or an unapproved workstation. If interrupted, inspect the isolated test entry for cleanup.
 
 **Trust boundary:** real IRC SASL authenticates an account to that server only. It does not grant Rust Boy Vault rights, RB-to-RB device trust, E2EE or a reliable recipient-storage receipt.
+
+## Independent interoperability finding
+
+The first positive SASL test exposed a registration mismatch: Ergo supplied numeric 903 using a pre-registration wildcard target. The portable SaslPlainFlow now permits '*' **only for numeric 903 after verified TLS, CAP ACK and the credential-response write**. Final numeric 001 still requires the expected nickname. Explicit unit tests verify a wildcard 903 followed by a rejected wildcard 001, and reject a 903 targeted at an unrelated named user. Failure diagnostics contain only the pre-failure protocol stage and a fixed event category; no raw frame or secret bytes are logged.
+
+**Not established by this pass:** actual native macOS Keychain or Windows Credential Manager provision/read/delete (manual opt-in test source only), legacy runtime or TPM-backed storage, independent second IRCd, signed offline updater/rollback, organizational command authority, or recipient delivery acknowledgments.
