@@ -130,7 +130,7 @@ fn rejected_sasl_password_fails_without_anonymous_downgrade() {
         &store, Duration::from_secs(12),
     );
     assert!(
-        matches!(rejected, Err(TransportError::Sasl(_))),
+        matches!(rejected, Err(TransportError::Sasl(_)) | Err(TransportError::SaslPhase(_, _))),
         "a wrong password must produce a SASL protocol rejection, not a successful anonymous login: {rejected:?}"
     );
     assert_eq!(store.calls(), 1);
