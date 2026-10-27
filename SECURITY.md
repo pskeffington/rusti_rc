@@ -13,7 +13,7 @@ If GitHub private vulnerability reporting is enabled for this repository, use th
 - Client and server policy entrypoints default to disabled. When enabled in a test, they explicitly return `NetworkingNotImplemented` / `ListenerNotImplemented`, and open no connection.
 - A read-only IRC adapter always describes chat sender identity as unverified; it cannot assign Rust Boy tasks, approve devices or authenticate an organization.
 - TLS, SASL, real socket handling, secure key storage, executed parser fuzzing, external dependency audit, credential revocation, vulnerability response and signed deployment verification have not been completed. The isolated cargo-fuzz source harness is present but not yet executed.
-- The six-host/toolchain GitHub Actions matrix tests **only what the workflow actually executes**; CI cross-target success does not certify older operating systems or hardware.
+- [GitHub CI run #15](https://github.com/pskeffington/rusti_rc/actions/runs/40440406547) passed 10/10 jobs (six Rust 1.70/stable host combinations and four source-only ARM/musl cross-target checks). This does **not** certify older operating systems, hardware, TLS interoperability or production security.
 - Source is [MIT-licensed](LICENSE), but crate publication and deployable releases remain gated pending protocol, dependency, security and signed-distribution validation.
 
 Read [G1b evidence](docs/security/G1B_PROTOCOL_EVIDENCE.md), [threat model](docs/security/THREAT_MODEL.md), [security research](docs/research/SECURITY_LEGACY_DEPLOYMENT_MATRIX.md) and [offline release runbook](docs/deployment/OFFLINE_REDEPLOYMENT_RUNBOOK.md).
