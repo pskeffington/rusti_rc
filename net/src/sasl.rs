@@ -180,7 +180,19 @@ impl TlsIrcSession {
                                     actions.push(action);
                                 }
                             }
-                            Err(err) => error = Some(TransportError::SaslPhase(phase, err)),
+                            Err(err) => {
+                                // Static classes only: no raw server text,
+                                // account names, or AUTHENTICATE credentials.
+                                let event = match frame.command {
+                                    "900" => "ACCOUNT_900",
+                                    "903" => "SUCCESS_903",
+                                    "001" => "WELCOME_001",
+                                    "CAP" => "CAPABILITY",
+                                    "AUTHENTICATE" => "CHALLENGE",
+                                    _ => "OTHER",
+                                };
+                                error = Some(TransportError::SaslPhase(phase, err, event));
+                            },
                         }
                     },
                 }
