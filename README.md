@@ -12,13 +12,13 @@ Build a modular IRC stack, independently distributable for portable Linux and ol
 
 | Path | Actual scaffold state |
 |---|---|
-| [rusti-proto](crates/rusti-proto/src/lib.rs) | Dependency-free bounded IRC line parser and PRIVMSG encoder, offline unit tests; not a complete RFC/IRCv3 implementation |
+| [rusti-proto](crates/rusti-proto/src/lib.rs) | Dependency-free bounded IRC parser, tag decoding, CAP 302 planner, incremental byte framing and offline tests; not a complete RFC/IRCv3 implementation |
 | [rusti-client](crates/rusti-client/src/lib.rs) | Disabled-by-default TLS-required connection policy; all networking returns not implemented |
 | [rusti-server](crates/rusti-server/src/lib.rs) | Disabled-by-default, loopback/TLS/limits policy; no actual listener |
 | [rusti-adapter](crates/rusti-adapter/src/lib.rs) | Untrusted read-only IRC chat framing for future Rust Boy import; no Vault/peer privileges |
 | [rusti-testkit](crates/rusti-testkit/src/lib.rs) | Synthetic offline wire fixtures |
 | [standalone-cli](examples/standalone-cli/src/main.rs) | Offline smoke test only, prints fixture result |
-| [CI](.github/workflows/ci.yml) | Rust 1.70 and stable on Linux/macOS/Windows runners; **workflow execution must be verified** |
+| [CI](.github/workflows/ci.yml) | Rust 1.70 and stable on Linux/macOS/Windows; ARM/musl cross-target source checks. CI results and hardware tests require verification |
 
 ## Local scaffold test
 
@@ -27,7 +27,7 @@ cargo test --workspace --all-targets
 cargo run -p rusti-standalone-cli
 ```
 
-These commands do **not** connect to IRC. No third-party crates are required for the current scaffolding. The minimum supported Rust toolchain **candidate** for the portable workspace is 1.70, with Rust 2021 edition; verify this in CI and on hardware before publishing a compatibility claim. Rust Boy's independently maintained workspace currently uses Rust 1.90.
+These commands do **not** connect to IRC. No third-party crates are required for the portable workspace; the separate nightly fuzz harness alone has a dev-only `libfuzzer-sys` dependency. The minimum supported Rust toolchain **candidate** for the portable workspace is 1.70, with Rust 2021 edition; verify this in CI and on hardware before publishing a compatibility claim. Rust Boy's independently maintained workspace currently uses Rust 1.90.
 
 ## Research, security and integration documentation
 
@@ -39,6 +39,8 @@ These commands do **not** connect to IRC. No third-party crates are required for
 - [Release acceptance checklist](docs/security/RELEASE_CHECKLIST.md)
 - [Rust Boy adapter contract](docs/integration/RUST_BOY_ADAPTER_CONTRACT.md)
 - [Architecture and phased development roadmap](docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md)
+- [G1b protocol implementation and pending evidence](docs/security/G1B_PROTOCOL_EVIDENCE.md)
+- [Nightly-only isolated fuzz harness](fuzz/README.md)
 - [Security disclosure and deployment limitations](SECURITY.md)
 - [Contribution rules](CONTRIBUTING.md)
 
@@ -51,4 +53,4 @@ These commands do **not** connect to IRC. No third-party crates are required for
 - Modern Windows target support starts with Windows 10 / Server 2016; EOL hosts require a separately reviewed isolation strategy.
 - A ported IRC client is not a protected medical, emergency or mission-critical communications system without independent security assessment.
 
-**Licensing decision pending.** This repository does not currently include a license grant; `publish = false` is set for each crate. Before code redistribution, select a compatible license, review upstream notices and record approval.
+**License: [MIT](LICENSE).** Cargo packages inherit `MIT` from the workspace. Publication remains disabled (`publish = false`) until interoperability, vulnerability review, and distribution security gates pass. Attribution and license compatibility are required for imported third-party code.

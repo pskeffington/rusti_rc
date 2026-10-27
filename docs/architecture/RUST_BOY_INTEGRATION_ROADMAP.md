@@ -12,7 +12,7 @@ Baseline: 2026-10-26. **Current status: offline scaffold committed; live IRC/TLS
 - `examples/standalone-cli` — fixture smoke, no IRC network access.
 - `docs/` — evidence matrix, threat model, compatibility, secure redeploy and integration contracts.
 
-The implementation is deliberately small: no Tokio, rustls or protocol dependencies have yet been selected. The future client/server stack must use reviewed cryptography, bounded message queues and an explicit operator lifecycle.
+The implementation is deliberately small: no Tokio, rustls or production protocol dependencies have yet been selected. The separate nightly-only fuzz harness depends on libfuzzer-sys, not the portable workspace. The future client/server stack must use reviewed cryptography, bounded message queues and an explicit operator lifecycle.
 
 ## Phased development
 
@@ -20,7 +20,7 @@ The implementation is deliberately small: no Tokio, rustls or protocol dependenc
 |---|---|---|
 | G0 | Source/project matrix, threat model, license and compatibility review | Literature/security matrices and threat model drafted; license not chosen |
 | G1a | Strict framing and baseline encoding | Portable `rusti-proto` parser/PRIVMSG preview + authored unit tests; CI/hardware not confirmed |
-| G1b | Complete protocol and fuzzing | IRCv3 CAP/tags handling, RFC2812 compliance, incremental bounded reader; **pending** |
+| G1b | Complete protocol and fuzzing | Opaque tags, decoded tag escaping, bounded streaming reader, limited CAP 302 planner, deterministic tests and a fuzz harness **authored**; complete CAP, RFC numerics, fuzz execution and interoperability remain pending |
 | G2 | Authenticated transport | TLS 1.2/1.3 and SAN validation, SASL where applicable, fail-closed reconnect and credential management; **pending** |
 | G3 | Operator chat | Join/part, direct/channel messages, bounded queues, retries with truthful unconfirmed state; **pending** |
 | G4 | Optional LAN server | Explicit operator enable, loopback first, quota/flood tests, trusted LAN provisioning; **pending** |

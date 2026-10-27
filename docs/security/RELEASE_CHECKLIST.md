@@ -9,7 +9,7 @@ Status: proposed acceptance criteria. **There are no releases or verified hardwa
 | MSRV | Rust 1.70 (portable core) and stable build/test, 2021 edition retained | CI authored, unverified |
 | Lock + provenance | Cargo-generated `Cargo.lock` committed, builds with `--locked`, SBOM, compiler/sysroot digest and source SHA captured | NOT DONE |
 | Supply chain | RustSec/cargo-deny and CI action pin reviews; findings triaged | NOT DONE |
-| Parser security | Fuzz, memory limits, tag/CTCP/Unicode/control tests | Some unit tests authored, fuzz NOT DONE |
+| Parser security | Fuzz, memory limits, tag/CTCP/Unicode/control tests | Bounded decoder, tags, limited CAP and deterministic cases authored; fuzz harness not executed; protocol audit NOT DONE |
 | TLS identity | Modern rustls provider selected; TLS 1.2/1.3, SAN validation, expired/revoked CA, no downgrade | NOT DONE |
 | Auth/secrets | SASL policy, OS-backed credentials, redacted logs, compartmentalized trust roots | NOT DONE |
 | Authorization | IRC nick never yields authenticated Rust Boy/Vault/organizational access | Source boundary authored, integration NOT DONE |

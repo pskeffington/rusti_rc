@@ -1,0 +1,23 @@
+[package]
+name = "rusti-proto-fuzz"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT"
+description = "Separate nightly-only fuzz harness for rusti-proto"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+rusti-proto = { path = "../crates/rusti-proto" }
+
+[[bin]]
+name = "irc_frames"
+path = "fuzz_targets/irc_frames.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
