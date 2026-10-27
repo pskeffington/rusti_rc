@@ -1,6 +1,6 @@
 # G2g-A — Offline signed-bundle verification laboratory
 
-**Status:** source and CI review, 2026-10-27. This is a **laboratory verifier only**. It cannot install, execute, stage, activate, roll back, or approve a release. No actual device, TPM, native desktop keychain, or anti-rollback counter is tested or provisioned.
+**Status:** G2g-A merged to `main` on 2026-10-27 in [PR #11](https://github.com/pskeffington/rusti_rc/pull/11), merge commit `cc5ba74d57a1da61f6cc627202e4be1fc8493441`. The exact tested PR head `84fef80eda2e5ee7f307abcfb6d5642c06e98326` passed [offline lab CI](https://github.com/pskeffington/rusti_rc/actions/runs/40457172972), [TLS CI](https://github.com/pskeffington/rusti_rc/actions/runs/40457172858) and [independent Ergo CI](https://github.com/pskeffington/rusti_rc/actions/runs/40457172616). This is a **laboratory verifier only**. It cannot install, execute, stage, activate, roll back, or approve a release. No actual device, TPM, native desktop keychain, or anti-rollback counter is tested or provisioned.
 
 ## Evidence and best-practice matrix
 
@@ -70,3 +70,14 @@ The floor `12` is a **test parameter**, not a protected boot counter. A maliciou
 - [ ] Rust Boy import behind a reviewed feature flag, with independent organizational authentication.
 
 **Security status:** a demonstration of signature and payload integrity, not a secure update mechanism. The signed release can still be stale or malicious if its private signing key is compromised. Release signing, hardware enrollment and physical redeployment are pending.
+
+## G2g-A verified CI evidence
+
+- [x] [Offline signed-bundle lab 1/1 CI](https://github.com/pskeffington/rusti_rc/actions/runs/40457172972): **14/14 ephemeral synthetic Ed25519 and tamper/negative tests passed**. Test signer exists only in a temporary directory and no signing key was checked into the repository.
+- [x] [Locked modern TLS 3/3 CI](https://github.com/pskeffington/rusti_rc/actions/runs/40457172858): Linux/macOS/Windows integration tests and Clippy passed. The synthetic localhost regression `cancellation_during_blocking_secret_lookup_prevents_payload_transmission` passed; it does not certify any real native keychain.
+- [x] [Independent pinned Ergo IRCd 1/1 CI](https://github.com/pskeffington/rusti_rc/actions/runs/40457172616): existing localhost IRC and synthetic registered-account SASL interoperability remained green.
+- [ ] No real legacy-ARM or supported OS runtime acceptance, protected publisher trust, monotonic floor, revocation freshness, signed actual installer or atomic offline redeploy exists.
+
+**Source boundary:** The portable Rust 1.70 core was unchanged by this PR. Previously passing 10/10 portable CI remains evidence for its earlier tested revision, not a claimed fresh G2g-A re-run.
+
+**Promotion decision:** remain lab-only and never activate bundles from these tools. The next security milestone must provide a protected public trust root, anti-rollback and signed time/revocation metadata, plus independently reviewed staging and physical hardware validation.
