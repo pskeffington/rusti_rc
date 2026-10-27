@@ -17,7 +17,8 @@ const MAX_PROPOSED_COMMANDS_PER_READ: usize = 16;
 impl TlsIrcSession {
     /// Perform IRCv3 CAP registration with a known TLS-authenticated server.
     /// The server name and root certificate must have already been verified
-    /// by connect_tls. Client credentials/SASL are not implemented.
+    /// by connect_tls. This method intentionally registers without SASL;
+    /// authenticated accounts use the separate register_sasl_plain method.
     ///
     /// This operation blocks only when the caller explicitly invokes it.
     /// Call from a worker context, not a handheld/desktop UI render thread.
@@ -49,17 +50,11 @@ impl TlsIrcSession {
         timeout: Duration,
         cancel: &RegistrationCancellation,
     ) -> Result<(), TransportError> {
-        if self.registered || self.registration_attempted {
-            return Err(TransportError::RegistrationAlreadyAttempted);
-        }
-        self.registration_attempted = true;
-        let result = self.register_with_capabilities_inner(
-            nickname, username, required, optional, timeout, cancel,
-        ).and_then(|()| self.restore_session_timeouts());
-        if result.is_err() {
-            self.abort_registration_connection();
-        }
-        result
+        self.run_registration_once(|session| {
+            session.register_with_capabilities_inner(
+                nickname, username, required, optional, timeout, cancel,
+            )
+        })
     }
 
     fn register_with_capabilities_inner(
