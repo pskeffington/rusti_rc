@@ -1,6 +1,6 @@
 # rusti_rc architecture and Rust Boy integration gates
 
-Baseline: 2026-10-26. **Current status: standalone TLS IRC and independently verified synthetic-account SASL authentication tests pass; Rust Boy import and field deployment remain unimplemented.** This roadmap describes proposed capabilities and gates, not verified functionality.
+Baseline: 2026-10-27. **Current status: standalone TLS IRC and independently verified synthetic-account SASL authentication tests pass; Rust Boy import and field deployment remain unimplemented.** This roadmap describes proposed capabilities and gates, not verified functionality.
 
 ## Module and trust boundaries
 
@@ -21,7 +21,7 @@ The portable core remains dependency-light and Rust 1.70-compatible. The separat
 | G0 | Source/project matrix, threat model, license and compatibility review | Literature/security matrices and threat model drafted; MIT license selected; upstream notice/security review still pending |
 | G1a | Strict framing and baseline encoding | Portable `rusti-proto` parser/PRIVMSG preview + unit tests; PR CI succeeded on tested host runners, hardware not verified |
 | G1b | Complete protocol and fuzzing | Opaque tags, decoded tag escaping, bounded streaming reader, limited CAP 302 planner, deterministic tests and a fuzz harness **authored**; complete CAP, RFC numerics, fuzz execution and interoperability remain pending (10/10 configured CI jobs passed) |
-| G2 | Authenticated transport | G2e verified TLS, CAP, independent Ergo IRCd ordinary chat and synthetic registered-account SASL success/failure. Native desktop keyring feature compiled; manual keychain lifecycle, second IRCd, headless key storage, legacy hardware and signed release acceptance remain open |
+| G2 | Authenticated transport | G2f verified cancellation/absolute-deadline protections for standalone CAP and SASL over TLS, independent Ergo IRC/SASL interoperability, and a safe offline ARM/Linux preflight. Native desktop keyring feature compiled; real keychain lifecycle, second IRCd, headless key storage, legacy runtime and signed release acceptance remain open |
 | G3 | Operator chat | JOIN and PRIVMSG submission implemented in standalone TLS module. Complete operator UI, message lifecycle, bounded queue policies, retries and delivery receipts remain pending |
 | G4 | Optional LAN server | Explicit operator enable, loopback first, quota/flood tests, trusted LAN provisioning; **pending** |
 | G5 | Rust Boy import | Feature-gated `rusti-adapter` into existing LINK UI, explicit send, no new permissions or storage leaks; **pending** |
