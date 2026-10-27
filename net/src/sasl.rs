@@ -178,7 +178,7 @@ impl TlsIrcSession {
                                 actions.push(action);
                             }
                         }
-                        Err(err) => error = Some(TransportError::Sasl(err)),
+                        Err(err) => error = Some(TransportError::SaslPhase(flow.stage(), err)),
                     },
                 }
             });
