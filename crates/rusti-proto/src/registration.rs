@@ -26,6 +26,7 @@ pub enum RegistrationError {
     Capability(CapError),
     UnsupportedRequiredCapability,
     UnexpectedWelcome,
+    UnexpectedTarget,
     RejectedByServer,
     InvalidPing,
 }
@@ -97,6 +98,13 @@ impl RegistrationFlow {
         ])
     }
 
+    fn expected_target(&self, frame: &ParsedMessage<'_>) -> bool {
+        match frame.params().first() {
+            Some(value) => *value == "*" || value.eq_ignore_ascii_case(&self.nickname),
+            None => false,
+        }
+    }
+
     /// Interpret one syntactically valid, **untrusted** server frame. The
     /// returned string is a bounded, allowlisted response proposal.
     /// On failure the entire registration must be abandoned and socket closed.
@@ -148,6 +156,10 @@ impl RegistrationFlow {
         }
 
         if frame.command.eq_ignore_ascii_case("CAP") {
+            if !self.expected_target(frame) {
+                self.state = RegistrationState::Failed;
+                return Err(RegistrationError::UnexpectedTarget);
+            }
             if !matches!(
                 self.state,
                 RegistrationState::Negotiating
@@ -171,6 +183,10 @@ impl RegistrationFlow {
         }
 
         if frame.command == "001" {
+            if !self.expected_target(frame) || frame.params().first() == Some(&"*") {
+                self.state = RegistrationState::Failed;
+                return Err(RegistrationError::UnexpectedTarget);
+            }
             if self.state == RegistrationState::AwaitingWelcome {
                 self.state = RegistrationState::Registered;
                 return Ok(None);
@@ -322,6 +338,22 @@ mod tests {
         assert_eq!(
             RegistrationFlow::new("Scout", "bad name", &[], &[]).unwrap_err(),
             RegistrationError::InvalidIdentifier
+        );
+    }
+
+    #[test]
+    fn rejects_cap_and_welcome_addressed_to_other_nicknames() {
+        let mut flow = RegistrationFlow::new("Scout", "scout", &[], &[]).unwrap();
+        flow.start().unwrap();
+        assert_eq!(
+            feed(&mut flow, "CAP another LS :multi-prefix\r\n"),
+            Err(RegistrationError::UnexpectedTarget)
+        );
+        let mut flow = RegistrationFlow::new("Scout", "scout", &[], &[]).unwrap();
+        flow.start().unwrap();
+        assert_eq!(
+            feed(&mut flow, ":irc 001 other :Welcome\r\n"),
+            Err(RegistrationError::UnexpectedTarget)
         );
     }
 
