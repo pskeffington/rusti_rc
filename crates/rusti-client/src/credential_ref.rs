@@ -22,6 +22,7 @@ pub enum CredentialPurpose {
 pub enum CredentialRefError {
     InvalidItemId,
     InvalidServerIdentity,
+    InvalidPort,
     ServerMismatch,
     InsecureClient,
 }
@@ -32,6 +33,7 @@ pub enum CredentialRefError {
 pub struct CredentialRef {
     item_id: String,
     server_identity: String,
+    server_port: u16,
     purpose: CredentialPurpose,
 }
 
@@ -45,6 +47,7 @@ impl CredentialRef {
     pub fn new(
         item_id: &str,
         server_identity: &str,
+        server_port: u16,
         purpose: CredentialPurpose,
     ) -> Result<Self, CredentialRefError> {
         // Store keys are opaque identifiers, not paths, URLs, command lines,
@@ -57,17 +60,24 @@ impl CredentialRef {
         {
             return Err(CredentialRefError::InvalidItemId);
         }
-        let server_ok = !server_identity.is_empty()
-            && server_identity.len() <= 253
-            && server_identity
-                .bytes()
-                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b':'));
-        if !server_ok {
+        if server_port == 0 {
+            return Err(CredentialRefError::InvalidPort);
+        }
+        // Reuse the same host/port validation policy as the live TLS client.
+        // This checks syntax only; it does not load a secret or open a socket.
+        let expected = ClientConfig {
+            enabled: true,
+            server_host: server_identity.to_string(),
+            server_port,
+            tls_required: true,
+        };
+        if expected.validate().is_err() {
             return Err(CredentialRefError::InvalidServerIdentity);
         }
         Ok(Self {
             item_id: item_id.to_string(),
             server_identity: server_identity.to_ascii_lowercase(),
+            server_port,
             purpose,
         })
     }
@@ -85,7 +95,9 @@ impl CredentialRef {
     /// a future authentication handler may access the OS keychain.
     pub fn authorize_for(&self, client: &ClientConfig) -> Result<(), CredentialRefError> {
         client.validate().map_err(|_| CredentialRefError::InsecureClient)?;
-        if !self.server_identity.eq_ignore_ascii_case(&client.server_host) {
+        if self.server_port != client.server_port
+            || !self.server_identity.eq_ignore_ascii_case(&client.server_host)
+        {
             return Err(CredentialRefError::ServerMismatch);
         }
         Ok(())
@@ -127,7 +139,7 @@ mod tests {
     #[test]
     fn secret_reference_never_debug_prints_operational_identifier() {
         let reference = CredentialRef::new(
-            "org_a_private_123", "irc.example.org", CredentialPurpose::SaslPassword,
+            "org_a_private_123", "irc.example.org", 6697, CredentialPurpose::SaslPassword,
         )
         .unwrap();
         let output = format!("{reference:?}");
@@ -140,24 +152,34 @@ mod tests {
     fn credential_reference_rejects_path_and_injection() {
         for item in ["../secrets", "key:root", "x\nOPER", "", "a b", "/etc/passwd"] {
             assert_eq!(
-                CredentialRef::new(item, "irc.example.org", CredentialPurpose::SaslPassword)
+                CredentialRef::new(item, "irc.example.org", 6697, CredentialPurpose::SaslPassword)
                     .unwrap_err(),
                 CredentialRefError::InvalidItemId
             );
         }
         assert_eq!(
-            CredentialRef::new("id", "bad host\n", CredentialPurpose::SaslPassword).unwrap_err(),
+            CredentialRef::new("id", "bad host\n", 6697, CredentialPurpose::SaslPassword).unwrap_err(),
             CredentialRefError::InvalidServerIdentity
+        );
+        assert_eq!(
+            CredentialRef::new("id", "irc.example.org", 0, CredentialPurpose::SaslPassword).unwrap_err(),
+            CredentialRefError::InvalidPort
         );
     }
 
     #[test]
     fn credential_is_bound_to_explicit_secure_server_identity() {
         let reference = CredentialRef::new(
-            "team_irc", "irc.example.org", CredentialPurpose::SaslPassword,
+            "team_irc", "irc.example.org", 6697, CredentialPurpose::SaslPassword,
         )
         .unwrap();
         assert_eq!(reference.authorize_for(&client("IRC.EXAMPLE.ORG")), Ok(()));
+        let mut other_port = client("irc.example.org");
+        other_port.server_port = 7000;
+        assert_eq!(
+            reference.authorize_for(&other_port),
+            Err(CredentialRefError::ServerMismatch)
+        );
         assert_eq!(
             reference.authorize_for(&client("another.example.org")),
             Err(CredentialRefError::ServerMismatch)
@@ -173,7 +195,7 @@ mod tests {
     #[test]
     fn disabled_client_cannot_request_credential_use() {
         let reference = CredentialRef::new(
-            "team_irc", "irc.example.org", CredentialPurpose::ClientCertificate,
+            "team_irc", "irc.example.org", 6697, CredentialPurpose::ClientCertificate,
         )
         .unwrap();
         let mut config = client("irc.example.org");
