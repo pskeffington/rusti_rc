@@ -43,6 +43,7 @@ These root-workspace commands do **not** connect to IRC. No third-party crates a
 - [G2 secure TLS transport and legacy-target decision](docs/architecture/G2_SECURE_TRANSPORT_DECISION.md)
 - [G2 TLS source and test evidence](docs/security/G2_TLS_IMPLEMENTATION_EVIDENCE.md)
 - [G2b IRC registration and recovery implementation](docs/architecture/G2B_REGISTRATION_RECOVERY.md)
+- [G2c independent Ergo IRCd and credential-reference design](docs/architecture/G2C_INDEPENDENT_IRCD_CREDENTIALS.md)
 - [Architecture and phased development roadmap](docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md)
 - [G1b protocol implementation and pending evidence](docs/security/G1B_PROTOCOL_EVIDENCE.md)
 - [Nightly-only isolated fuzz harness](fuzz/README.md)
