@@ -260,8 +260,12 @@ impl SaslPlainFlow {
         }
 
         if frame.command == "903" {
+            // Servers can address pre-registration SASL numerics to '*'.
+            // Acceptance is still gated on the authenticated TLS session,
+            // negotiated SASL, challenge response write and numeric 903.
+            // The final 001 welcome must target the exact chosen nickname.
             if self.stage != SaslStage::AwaitingResult
-                || !self.target_matches(frame, false)
+                || !self.target_matches(frame, true)
             {
                 return self.fail(SaslError::UnexpectedFrame);
             }
@@ -389,6 +393,45 @@ mod tests {
         assert_eq!(
             feed(&mut s, ":irc CAP tester DEL :sasl\r\n"),
             Err(SaslError::CapabilityRevoked)
+        );
+        assert!(!s.registered());
+    }
+
+    #[test]
+    fn sasl_pre_registration_903_wildcard_is_allowed_but_welcome_star_is_not() {
+        let mut s = SaslPlainFlow::new("tester", "tester").unwrap();
+        s.begin().unwrap();
+        feed(&mut s, "CAP * LS :sasl=PLAIN\r\n").unwrap();
+        s.cap_request_written().unwrap();
+        feed(&mut s, "CAP tester ACK :sasl\r\n").unwrap();
+        s.mechanism_written().unwrap();
+        feed(&mut s, "AUTHENTICATE +\r\n").unwrap();
+        s.payload_written().unwrap();
+        assert_eq!(
+            feed(&mut s, ":irc 903 * :SASL authentication successful\r\n"),
+            Ok(SaslAction::Send(CAP_END))
+        );
+        s.cap_end_written().unwrap();
+        assert_eq!(
+            feed(&mut s, ":irc 001 * :wrong welcome target\r\n"),
+            Err(SaslError::InvalidServerTarget)
+        );
+        assert!(!s.registered());
+    }
+
+    #[test]
+    fn sasl_pre_registration_903_to_different_named_user_is_rejected() {
+        let mut s = SaslPlainFlow::new("tester", "tester").unwrap();
+        s.begin().unwrap();
+        feed(&mut s, "CAP * LS :sasl=PLAIN\r\n").unwrap();
+        s.cap_request_written().unwrap();
+        feed(&mut s, "CAP tester ACK :sasl\r\n").unwrap();
+        s.mechanism_written().unwrap();
+        feed(&mut s, "AUTHENTICATE +\r\n").unwrap();
+        s.payload_written().unwrap();
+        assert_eq!(
+            feed(&mut s, ":irc 903 another_user :SASL complete\r\n"),
+            Err(SaslError::UnexpectedFrame)
         );
         assert!(!s.registered());
     }
