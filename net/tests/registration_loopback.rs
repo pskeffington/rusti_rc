@@ -250,6 +250,13 @@ fn missing_required_cap_fails_closed() {
     ));
     assert!(!client.is_registered());
     assert!(matches!(client.send_privmsg("#lab", "x"), Err(TransportError::NotRegistered)));
+    // Shared fail-closed wrapper permanently consumes this TLS session.
+    assert!(matches!(
+        client.register_with_capabilities(
+            "tester", "tester", &[], &[], Duration::from_secs(1),
+        ),
+        Err(TransportError::RegistrationAlreadyAttempted),
+    ));
     assert_eq!(server.join().unwrap().len(), 3);
 }
 
