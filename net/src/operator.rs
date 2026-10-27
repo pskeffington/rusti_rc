@@ -15,7 +15,9 @@ use crate::{Receive, Submission, TlsIrcSession, TransportError};
 pub enum OperatorSendOutcome {
     QueueEmpty,
     /// Locally written to the authenticated TLS session, not delivered.
-    SubmittedUnconfirmed { draft_id: DraftId },
+    SubmittedUnconfirmed {
+        draft_id: DraftId,
+    },
 }
 
 #[derive(Debug)]
