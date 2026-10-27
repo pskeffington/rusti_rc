@@ -19,7 +19,8 @@ Build a modular IRC stack, independently distributable for portable Linux and ol
 | [rusti-testkit](crates/rusti-testkit/src/lib.rs) | Synthetic offline wire fixtures |
 | [standalone-cli](examples/standalone-cli/src/main.rs) | Offline smoke test only, prints fixture result |
 | [TLS networking preview](net/README.md) | Separate modern rustls/ring workspace: explicit verified TLS connection, basic IRC commands and localhost certificate tests; no Rust Boy import |
-| [CI](.github/workflows/ci.yml) | [Run #15 passed 10/10 jobs](https://github.com/pskeffington/rusti_rc/actions/runs/40440406547): Rust 1.70/stable Linux/macOS/Windows tests; ARMv6/ARMv7/ARM64/musl source-only checks. Hardware/interoperability not validated |
+| [Portable CI](.github/workflows/ci.yml) | [Run #26 passed 10/10](https://github.com/pskeffington/rusti_rc/actions/runs/40442639261): Rust 1.70/stable Linux/macOS/Windows and ARMv6/ARMv7/ARM64/musl compile-only checks |
+| [TLS CI](.github/workflows/verified-tls.yml) | [Run #10 passed 3/3](https://github.com/pskeffington/rusti_rc/actions/runs/40442639269): locked-dependency verified-TLS loopback tests and Clippy on Linux/macOS/Windows |
 
 ## Local scaffold test
 
@@ -28,7 +29,7 @@ cargo test --workspace --all-targets
 cargo run -p rusti-standalone-cli
 ```
 
-These root-workspace commands do **not** connect to IRC. No third-party crates are required for the portable workspace; the separate nightly fuzz harness alone has a dev-only `libfuzzer-sys` dependency. The minimum Rust toolchain **candidate** for the portable workspace is 1.70, with Rust 2021 edition. Rust 1.70 CI passed on the tested host runners; hardware, OS ABI and field deployment claims remain unverified. Rust Boy's independently maintained workspace currently uses Rust 1.90.
+These root-workspace commands do **not** connect to IRC. No third-party crates are required for the portable workspace; the separate nightly fuzz harness uses a dev-only `libfuzzer-sys` dependency and the independent net/ TLS workspace uses its own frozen dependency graph. The minimum Rust toolchain **candidate** for the portable workspace is 1.70, with Rust 2021 edition. Rust 1.70 CI passed on the tested host runners; hardware, OS ABI and field deployment claims remain unverified. Rust Boy's independently maintained workspace currently uses Rust 1.90.
 
 ## Research, security and integration documentation
 
