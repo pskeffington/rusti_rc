@@ -16,6 +16,7 @@ Start with [AGENTS.md](../AGENTS.md) for agent safety rules, [README](../README.
 | server, listener, lan server | [crates/rusti-server/src/lib.rs](../crates/rusti-server/src/lib.rs) | [docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md](../docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md) |
 | machine indexing, index, source lookup | [scripts/repo_index.py](../scripts/repo_index.py) | [index/MACHINE_INDEX.json](../index/MACHINE_INDEX.json) |
 | offline install, bundle, signature | [docs/deployment/G2G_SIGNED_BUNDLE_LAB.md](../docs/deployment/G2G_SIGNED_BUNDLE_LAB.md) | [scripts/verify_offline_bundle_lab.py](../scripts/verify_offline_bundle_lab.py) |
+| operator chat, outbox, message queue | [net/src/operator.rs](../net/src/operator.rs) | [crates/rusti-client/src/outbox.rs](../crates/rusti-client/src/outbox.rs) |
 | registration, capability negotiation, cap 302 | [crates/rusti-proto/src/registration.rs](../crates/rusti-proto/src/registration.rs) | [net/src/registration.rs](../net/src/registration.rs) |
 | rust boy, pip boy, link ui | [docs/integration/RUST_BOY_ADAPTER_CONTRACT.md](../docs/integration/RUST_BOY_ADAPTER_CONTRACT.md) | [crates/rusti-adapter/src/lib.rs](../crates/rusti-adapter/src/lib.rs) |
 | sasl, authentication, nickserv | [crates/rusti-proto/src/sasl.rs](../crates/rusti-proto/src/sasl.rs) | [net/src/sasl.rs](../net/src/sasl.rs) |
