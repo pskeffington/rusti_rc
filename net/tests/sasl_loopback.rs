@@ -4,7 +4,8 @@
 
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener};
-use std::sync::Arc;
+use std::sync::{mpsc, Arc, Mutex};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use std::time::Duration;
 
@@ -13,6 +14,7 @@ use rusti_client::credential_ref::{
     CredentialPurpose, CredentialRef, ProtectedCredentialStore,
 };
 use rusti_client::ClientConfig;
+use rusti_transport_tls::cancel::RegistrationCancellation;
 use rusti_transport_tls::{Submission, Timeouts, TlsIrcSession, TransportError};
 use rustls::pki_types::PrivatePkcs8KeyDer;
 use rustls::{RootCertStore, ServerConfig, ServerConnection, StreamOwned};
@@ -34,6 +36,7 @@ enum Mode {
     Reject,
     NoPlain,
     PrematureWelcome,
+    CancelDuringLookup,
 }
 
 fn read_line(tls: &mut StreamOwned<ServerConnection, std::net::TcpStream>) -> Option<String> {
@@ -113,6 +116,11 @@ fn lab(
 
         if tls.write_all(b"AUTHENTICATE +\r\n").is_err() {
             return false;
+        }
+        if matches!(mode, Mode::CancelDuringLookup) {
+            // If a secret-derived AUTHENTICATE frame is transmitted after
+            // operator cancellation this test must fail, not log the bytes.
+            return read_line(&mut tls).is_none();
         }
         // Read and check the sensitive command without returning it or
         // recording it in a test artifact or failure message.
@@ -219,4 +227,66 @@ fn premature_welcome_is_not_sasl_success() {
     ).is_err());
     assert!(!tls.is_registered());
     assert!(server.join().unwrap());
+}
+
+struct DelayedLookupStore {
+    entered: mpsc::Sender<()>,
+    resume: Mutex<mpsc::Receiver<()>>,
+    calls: AtomicUsize,
+}
+
+impl ProtectedCredentialStore for DelayedLookupStore {
+    type Error = ();
+
+    fn with_secret<R, F>(&self, _: &CredentialRef, f: F) -> Result<R, Self::Error>
+    where
+        F: FnOnce(&[u8]) -> R,
+    {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        self.entered.send(()).expect("test cancellation worker still alive");
+        self.resume
+            .lock()
+            .unwrap()
+            .recv_timeout(Duration::from_secs(2))
+            .expect("operator cancellation was issued");
+        // A secret is provided AFTER cancellation; the transport must not
+        // send any password-derived bytes over the authenticated TLS socket.
+        Ok(f(b"synthetic-test-password"))
+    }
+}
+
+#[test]
+fn cancellation_during_blocking_secret_lookup_prevents_payload_transmission() {
+    let (addr, roots, server) = lab(Mode::CancelDuringLookup);
+    let mut tls = session(addr, roots);
+    let token = Arc::new(RegistrationCancellation::new());
+    let (entered_tx, entered_rx) = mpsc::channel();
+    let (resume_tx, resume_rx) = mpsc::channel();
+    let store = DelayedLookupStore {
+        entered: entered_tx,
+        resume: Mutex::new(resume_rx),
+        calls: AtomicUsize::new(0),
+    };
+    let other = Arc::clone(&token);
+    let worker = thread::spawn(move || {
+        entered_rx
+            .recv_timeout(Duration::from_secs(3))
+            .expect("store callback must be entered after verified challenge");
+        other.cancel();
+        resume_tx.send(()).expect("release blocked callback");
+    });
+    let result = tls.register_sasl_plain_cancellable(
+        "tester", "tester", "tester",
+        &reference(addr.port()), &store,
+        Duration::from_secs(4), &token,
+    );
+    worker.join().unwrap();
+    assert!(matches!(result, Err(TransportError::RegistrationCancelled)), "{result:?}");
+    assert_eq!(store.calls.load(Ordering::SeqCst), 1);
+    assert!(!tls.is_registered());
+    assert!(matches!(
+        tls.send_privmsg("#lab", "must never send"),
+        Err(TransportError::NotRegistered)
+    ));
+    assert!(server.join().unwrap(), "no credential frame may be sent after cancellation");
 }
