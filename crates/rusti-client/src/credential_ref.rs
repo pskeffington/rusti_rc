@@ -115,9 +115,11 @@ impl CredentialRef {
 }
 
 /// Platform adapters must implement a protected, interactive or already
-/// authorized credential lookup. This **does not** have an implementation in
-/// rusti_rc yet. The callback design avoids returning a long-lived secret
-/// value, but it does not by itself guarantee zeroization or OS protection.
+/// authorized credential lookup. The *separate* modern `net/` workspace has
+/// an opt-in native macOS/Windows keychain adapter; this portable crate only
+/// defines the no-I/O policy and interface. The callback design avoids
+/// returning a long-lived secret, but by itself does not guarantee memory
+/// zeroization or OS protection.
 ///
 /// No environment-variable, plaintext-file or CLI-argument store should be
 /// shipped as a production implementation of this trait.
