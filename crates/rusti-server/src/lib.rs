@@ -1,4 +1,7 @@
-//! No listening socket is implemented. Public binds and plaintext are denied.
+//! Server policy scaffold; no IRC listener or server runtime is implemented.
+//!
+//! Default-off, loopback-only binding and TLS/limit validation are preparation
+//! for a future LAN server. No port is opened when this crate is imported.
 #![forbid(unsafe_code)]
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
