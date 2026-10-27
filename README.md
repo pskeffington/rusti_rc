@@ -25,6 +25,10 @@ Build a modular IRC stack, independently distributable for portable Linux and ol
 | [Independent IRCd CI](.github/workflows/ergo-interop.yml) | [G2g-A 1/1 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40457172616): digest-pinned localhost Ergo v2.19.1, ephemeral CA, ordinary channel chat and 3 real-account synthetic SASL tests. Not hardware acceptance | 
 | [TLS CI](.github/workflows/verified-tls.yml) | [G2g-A 3/3 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40457172858): locked TLS/Clippy on Linux/macOS/Windows, including G2g-A cancellation during blocked credential retrieval and G2f interrupted registration |
 
+## G3a operator outbox (development branch)
+
+The portable `rusti-client::outbox` module adds a bounded RAM-only FIFO for operator-authored chat drafts. It validates each draft against the existing IRC PRIVMSG encoder, requires explicit registration and fresh operator confirmation before releasing one draft, and clears unsubmitted drafts on disconnect. Messages that leave the queue are never automatically replayed. This is **not** a persistent queue, UI integration, transport-level send confirmation, recipient delivery receipt, or Rust Boy import. Sending through `TlsIrcSession::send_privmsg` remains a separate explicit caller action; any I/O failure leaves acceptance unknown.
+
 ## Local scaffold test
 
 ```sh
