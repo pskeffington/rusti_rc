@@ -15,6 +15,25 @@ Contributions are welcome as focused, reviewable modules, but **no feature is ap
 9. Keep tests and fixtures synthetic. No operator journals, location records, user credentials, PHI, tokens or host keys committed or printed.
 10. MIT licensing is now documented in [LICENSE](LICENSE). Keep `publish = false` until API, CI, security, dependency provenance, and release controls have been reviewed. A license is not a release approval.
 
+## Rust formatting and cleanup
+
+Before opening a pull request, run the pinned formatter against each independent
+Rust workspace (portable, modern TLS, and fuzz). These commands **check only**:
+
+```sh
+cargo +1.90.0 fmt --all --manifest-path Cargo.toml -- --check
+cargo +1.90.0 fmt --all --manifest-path net/Cargo.toml -- --check
+cargo +1.90.0 fmt --all --manifest-path fuzz/Cargo.toml -- --check
+```
+
+To apply formatting during development, omit the trailing `-- --check`,
+review the resulting diff, and rerun all relevant tests. The machine-index
+workflow enforces formatting on pull requests without write permissions.
+
+Changes to CAP or SASL registration must preserve the shared fail-closed
+`run_registration_once` guard and include TLS positive, rejection, cancellation
+and no-downgrade tests. Formatting alone is not behavioral validation.
+
 ## Development smoke
 
 ```sh
