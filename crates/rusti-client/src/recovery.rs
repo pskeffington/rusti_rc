@@ -74,11 +74,13 @@ impl RecoveryPolicy {
         operator_approved: bool,
         jitter_seed: u64,
     ) -> RecoveryDecision {
-        if !self.validate() || !operator_approved {
-            return RecoveryDecision::Stop(StopReason::Disabled);
-        }
+        // Cancellation is a terminal state regardless of prior approval:
+        // it must never be interpreted as permission to restart/retry.
         if failure == FailureKind::OperatorCancelled {
             return RecoveryDecision::Stop(StopReason::Cancelled);
+        }
+        if !self.validate() || !operator_approved {
+            return RecoveryDecision::Stop(StopReason::Disabled);
         }
         if !matches!(
             failure,
@@ -169,6 +171,10 @@ mod tests {
     fn explicit_cancellation_is_terminal() {
         assert_eq!(
             RecoveryPolicy::default().decide(FailureKind::OperatorCancelled, 0, true, 123),
+            RecoveryDecision::Stop(StopReason::Cancelled)
+        );
+        assert_eq!(
+            RecoveryPolicy::default().decide(FailureKind::OperatorCancelled, 0, false, 123),
             RecoveryDecision::Stop(StopReason::Cancelled)
         );
     }
