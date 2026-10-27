@@ -1,0 +1,20 @@
+[workspace]
+members = [
+    "crates/rusti-proto",
+    "crates/rusti-client",
+    "crates/rusti-server",
+    "crates/rusti-adapter",
+    "crates/rusti-testkit",
+    "examples/standalone-cli",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+
+[profile.release]
+overflow-checks = true
+panic = "abort"
+strip = "symbols"
