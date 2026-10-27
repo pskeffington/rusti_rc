@@ -1,6 +1,6 @@
 # Offline deployment, redeployment and safe rollback runbook
 
-**Status: specification only. There is no release installer, artifact signing, trust-root verifier, migration tool, or updater in this repository. Do not treat these steps as a completed deployment procedure.**
+**Status: specification and G2g-A signature-verification laboratory only.** A fail-closed, Ed25519 **lab-only** manifest/payload verifier and negative CI tests now exist; there is still **no production release installer, publisher signing infrastructure, protected trust-root/rollback verifier, migration tool, or updater**. Do not treat the lab script as a deployed update system. See [G2g-A signed-bundle laboratory](G2G_SIGNED_BUNDLE_LAB.md).
 
 ## Design rule
 
@@ -20,7 +20,7 @@ rusti_rc-vX.Y.Z-<target-triple>/
   docs/DEPLOYMENT.txt
 ```
 
-Archive extraction, manifest parsing, signature verification, symlink swaps, portable config and rollback are **not implemented**. The manifest schema must be versioned and reject unknown security-critical fields.
+The proposed full production bundle remains **unimplemented**. G2g-A separately demonstrates detached Ed25519 manifest verification and fixed-file binary SHA-256 using a stricter three-file *synthetic lab* schema. Production archive extraction, robust root rotation, threshold metadata, protected rollback floor, signed expiry, safe activation and migration are **not implemented**. The lab verifier rejects unknown fields and has no installation action.
 
 ## Operator procedure, after signing and verifier implementation
 
@@ -52,7 +52,7 @@ Archive extraction, manifest parsing, signature verification, symlink swaps, por
 
 - R0: portable build/test matrix and threat model **scaffolded**.
 - R1: client TLS and authenticating IPC identity tests **pending**.
-- R2: SBOM, pinned lockfile, signed manifest and verifier **pending**.
+- R2: pinned lockfile completed; synthetic signed-manifest/payload verifier **lab-tested only**. SBOM, publisher key enrollment, trusted signing, revocation and deployment-grade verifier pending.
 - R3: idempotent configuration migrations and atomic A/B installations **pending**.
 - R4: offline ARMv6/v7/ARM64, old Linux, Windows and Mac recovery drills **pending**.
 - R5: Rust Boy adapter permission review and real-device field acceptance **pending**.

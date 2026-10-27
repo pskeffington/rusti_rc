@@ -38,6 +38,7 @@ These root-workspace commands do **not** connect to IRC. No third-party crates a
 - [Security and legacy system literature matrix](docs/research/SECURITY_LEGACY_DEPLOYMENT_MATRIX.md)
 - [Legacy target and hardware compatibility profile](docs/deployment/LEGACY_COMPATIBILITY.md)
 - [Offline redeployment and rollback runbook](docs/deployment/OFFLINE_REDEPLOYMENT_RUNBOOK.md)
+- [G2g-A Ed25519 signed-bundle verification laboratory](docs/deployment/G2G_SIGNED_BUNDLE_LAB.md)
 - [Threat model](docs/security/THREAT_MODEL.md)
 - [Release acceptance checklist](docs/security/RELEASE_CHECKLIST.md)
 - [Rust Boy adapter contract](docs/integration/RUST_BOY_ADAPTER_CONTRACT.md)
@@ -60,7 +61,7 @@ These root-workspace commands do **not** connect to IRC. No third-party crates a
 - Independent Ergo **ordinary IRC and disposable real-account SASL PLAIN** interoperability passed in isolated CI, including bad-password/no-downgrade and wrong-server checks. Desktop keyring support is compiled and negative-tested, but **actual Keychain/Credential Manager lifecycle and physical legacy runtime remain unverified**. G2f verifies cancelled and stalled registration stops before anonymous fallback or credential reuse.
 - Do not weaken TLS/certificate validation, authentication, code-signing or rollback protections for legacy OSes.
 - Build cross-target, inspect glibc/musl, crypto provider and CPU constraints; then test on real hardware. Cross compilation alone is not validation.
-- Treat package digest and **publisher signature** as separate checks. This repo has no signer or release verifier yet.
+- Treat package digest and **publisher signature** as separate checks. G2g-A adds **lab-only signed-manifest verification**, but there is no production publisher signer, protected trust-root updater, monotonic anti-rollback counter or deployable installer.
 - Modern Windows target support starts with Windows 10 / Server 2016; EOL hosts require a separately reviewed isolation strategy.
 - A ported IRC client is not a protected medical, emergency or mission-critical communications system without independent security assessment.
 
