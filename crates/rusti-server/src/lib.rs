@@ -1,4 +1,7 @@
-//! No listening socket is implemented. Public binds and plaintext are denied.
+//! Server policy scaffold; no IRC listener or server runtime is implemented.
+//!
+//! Default-off, loopback-only binding and TLS/limit validation are preparation
+//! for a future LAN server. No port is opened when this crate is imported.
 #![forbid(unsafe_code)]
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
@@ -44,8 +47,10 @@ impl ServerConfig {
         if !self.tls_required {
             return Err(ServerError::InsecureTransportForbidden);
         }
-        if self.max_clients == 0 || self.max_clients > 64
-            || self.max_channels == 0 || self.max_channels > 32
+        if self.max_clients == 0
+            || self.max_clients > 64
+            || self.max_channels == 0
+            || self.max_channels > 32
         {
             return Err(ServerError::InvalidLimits);
         }
@@ -64,7 +69,10 @@ mod tests {
 
     #[test]
     fn server_is_disabled_on_import() {
-        assert_eq!(ServerConfig::default().request_start(), Err(ServerError::Disabled));
+        assert_eq!(
+            ServerConfig::default().request_start(),
+            Err(ServerError::Disabled)
+        );
     }
 
     #[test]
@@ -84,7 +92,10 @@ mod tests {
             tls_required: false,
             ..ServerConfig::default()
         };
-        assert_eq!(cfg.request_start(), Err(ServerError::InsecureTransportForbidden));
+        assert_eq!(
+            cfg.request_start(),
+            Err(ServerError::InsecureTransportForbidden)
+        );
     }
 
     #[test]
@@ -93,6 +104,9 @@ mod tests {
             enabled: true,
             ..ServerConfig::default()
         };
-        assert_eq!(cfg.request_start(), Err(ServerError::ListenerNotImplemented));
+        assert_eq!(
+            cfg.request_start(),
+            Err(ServerError::ListenerNotImplemented)
+        );
     }
 }

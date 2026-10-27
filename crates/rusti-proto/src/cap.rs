@@ -146,8 +146,7 @@ impl CapNegotiator {
                 let mut selected = self.required.clone();
                 for name in &self.optional {
                     if self.advertised.contains(name)
-                        && (name != "server-time"
-                            || selected.iter().any(|n| n == "message-tags"))
+                        && (name != "server-time" || selected.iter().any(|n| n == "message-tags"))
                     {
                         unique_push(&mut selected, name);
                     }
@@ -166,8 +165,13 @@ impl CapNegotiator {
                 }
                 let acknowledged: Vec<&str> = params[2].split_whitespace().collect();
                 let same = acknowledged.len() == self.requested.len()
-                    && acknowledged.iter().all(|cap| self.requested.iter().any(|r| r.as_str() == *cap))
-                    && self.requested.iter().all(|cap| acknowledged.contains(&cap.as_str()));
+                    && acknowledged
+                        .iter()
+                        .all(|cap| self.requested.iter().any(|r| r.as_str() == *cap))
+                    && self
+                        .requested
+                        .iter()
+                        .all(|cap| acknowledged.contains(&cap.as_str()));
                 if !same {
                     self.state = CapState::Failed;
                     return Err(CapError::BadAcknowledgement);
@@ -232,7 +236,10 @@ mod tests {
             Ok(Some("CAP END\r\n".into()))
         );
         assert_eq!(cap.state(), CapState::Complete);
-        assert_eq!(cap.enabled().iter().map(String::as_str).collect::<Vec<_>>(), vec!["message-tags", "server-time"]);
+        assert_eq!(
+            cap.enabled().iter().map(String::as_str).collect::<Vec<_>>(),
+            vec!["message-tags", "server-time"]
+        );
     }
 
     #[test]

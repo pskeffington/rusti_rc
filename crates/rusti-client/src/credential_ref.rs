@@ -100,13 +100,16 @@ impl CredentialRef {
         self.server_port
     }
 
-
     /// Bind each credential reference to the exact TLS server identity before
     /// a future authentication handler may access the OS keychain.
     pub fn authorize_for(&self, client: &ClientConfig) -> Result<(), CredentialRefError> {
-        client.validate().map_err(|_| CredentialRefError::InsecureClient)?;
+        client
+            .validate()
+            .map_err(|_| CredentialRefError::InsecureClient)?;
         if self.server_port != client.server_port
-            || !self.server_identity.eq_ignore_ascii_case(&client.server_host)
+            || !self
+                .server_identity
+                .eq_ignore_ascii_case(&client.server_host)
         {
             return Err(CredentialRefError::ServerMismatch);
         }
@@ -115,20 +118,18 @@ impl CredentialRef {
 }
 
 /// Platform adapters must implement a protected, interactive or already
-/// authorized credential lookup. This **does not** have an implementation in
-/// rusti_rc yet. The callback design avoids returning a long-lived secret
-/// value, but it does not by itself guarantee zeroization or OS protection.
+/// authorized credential lookup. The *separate* modern `net/` workspace has
+/// an opt-in native macOS/Windows keychain adapter; this portable crate only
+/// defines the no-I/O policy and interface. The callback design avoids
+/// returning a long-lived secret, but by itself does not guarantee memory
+/// zeroization or OS protection.
 ///
 /// No environment-variable, plaintext-file or CLI-argument store should be
 /// shipped as a production implementation of this trait.
 pub trait ProtectedCredentialStore {
     type Error;
 
-    fn with_secret<R, F>(
-        &self,
-        reference: &CredentialRef,
-        use_secret: F,
-    ) -> Result<R, Self::Error>
+    fn with_secret<R, F>(&self, reference: &CredentialRef, use_secret: F) -> Result<R, Self::Error>
     where
         F: FnOnce(&[u8]) -> R;
 }
@@ -149,7 +150,10 @@ mod tests {
     #[test]
     fn secret_reference_never_debug_prints_operational_identifier() {
         let reference = CredentialRef::new(
-            "org_a_private_123", "irc.example.org", 6697, CredentialPurpose::SaslPassword,
+            "org_a_private_123",
+            "irc.example.org",
+            6697,
+            CredentialPurpose::SaslPassword,
         )
         .unwrap();
         let output = format!("{reference:?}");
@@ -160,19 +164,33 @@ mod tests {
 
     #[test]
     fn credential_reference_rejects_path_and_injection() {
-        for item in ["../secrets", "key:root", "x\nOPER", "", "a b", "/etc/passwd"] {
+        for item in [
+            "../secrets",
+            "key:root",
+            "x\nOPER",
+            "",
+            "a b",
+            "/etc/passwd",
+        ] {
             assert_eq!(
-                CredentialRef::new(item, "irc.example.org", 6697, CredentialPurpose::SaslPassword)
-                    .unwrap_err(),
+                CredentialRef::new(
+                    item,
+                    "irc.example.org",
+                    6697,
+                    CredentialPurpose::SaslPassword
+                )
+                .unwrap_err(),
                 CredentialRefError::InvalidItemId
             );
         }
         assert_eq!(
-            CredentialRef::new("id", "bad host\n", 6697, CredentialPurpose::SaslPassword).unwrap_err(),
+            CredentialRef::new("id", "bad host\n", 6697, CredentialPurpose::SaslPassword)
+                .unwrap_err(),
             CredentialRefError::InvalidServerIdentity
         );
         assert_eq!(
-            CredentialRef::new("id", "irc.example.org", 0, CredentialPurpose::SaslPassword).unwrap_err(),
+            CredentialRef::new("id", "irc.example.org", 0, CredentialPurpose::SaslPassword)
+                .unwrap_err(),
             CredentialRefError::InvalidPort
         );
     }
@@ -180,7 +198,10 @@ mod tests {
     #[test]
     fn credential_is_bound_to_explicit_secure_server_identity() {
         let reference = CredentialRef::new(
-            "team_irc", "irc.example.org", 6697, CredentialPurpose::SaslPassword,
+            "team_irc",
+            "irc.example.org",
+            6697,
+            CredentialPurpose::SaslPassword,
         )
         .unwrap();
         assert_eq!(reference.authorize_for(&client("IRC.EXAMPLE.ORG")), Ok(()));
@@ -205,7 +226,10 @@ mod tests {
     #[test]
     fn disabled_client_cannot_request_credential_use() {
         let reference = CredentialRef::new(
-            "team_irc", "irc.example.org", 6697, CredentialPurpose::ClientCertificate,
+            "team_irc",
+            "irc.example.org",
+            6697,
+            CredentialPurpose::ClientCertificate,
         )
         .unwrap();
         let mut config = client("irc.example.org");

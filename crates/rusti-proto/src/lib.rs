@@ -1,8 +1,10 @@
-//! Limited, dependency-free IRC wire framing.
+//! Dependency-free IRC wire protocol and bounded IRCv3 state machines.
 //!
-//! No sockets, credential handling, rendering, or trusted commands.
-//! G1b preview only: bounded framing, opaque IRCv3 tags, limited CAP 302.
-//! Complete RFC numerics, full IRCv3 and authenticated transport remain pending.
+//! Includes strict framing, tags, CAP 302 negotiation, and opt-in SASL PLAIN
+//! negotiation logic. This portable Rust 1.70 crate has no sockets, secrets,
+//! certificate validation, persistence, or Rust Boy organizational authority.
+//! Live TLS transport and protected credentials reside in the separate
+//! `net/` workspace. This is a deliberately limited IRC/IRCv3 subset.
 #![forbid(unsafe_code)]
 
 pub mod cap;
@@ -61,9 +63,17 @@ impl<'a> ParsedMessage<'a> {
 fn bidi_control(c: char) -> bool {
     matches!(
         c,
-        '\u{200e}' | '\u{200f}' | '\u{202a}' | '\u{202b}' | '\u{202c}'
-            | '\u{202d}' | '\u{202e}' | '\u{2066}' | '\u{2067}'
-            | '\u{2068}' | '\u{2069}'
+        '\u{200e}'
+            | '\u{200f}'
+            | '\u{202a}'
+            | '\u{202b}'
+            | '\u{202c}'
+            | '\u{202d}'
+            | '\u{202e}'
+            | '\u{2066}'
+            | '\u{2067}'
+            | '\u{2068}'
+            | '\u{2069}'
     )
 }
 
@@ -114,9 +124,7 @@ pub fn parse_frame(frame: &str) -> Result<ParsedMessage<'_>, FrameError> {
     let mut rest = line;
     let mut tags = None;
     if let Some(after_at) = rest.strip_prefix('@') {
-        let (tag_data, tail) = after_at
-            .split_once(' ')
-            .ok_or(FrameError::MalformedTags)?;
+        let (tag_data, tail) = after_at.split_once(' ').ok_or(FrameError::MalformedTags)?;
         if tag_data.is_empty() {
             return Err(FrameError::MalformedTags);
         }
@@ -219,10 +227,8 @@ mod tests {
         let ping = parse_frame("PING :server.example\r\n").unwrap();
         assert_eq!(ping.command, "PING");
         assert_eq!(ping.params(), &["server.example"]);
-        let msg = parse_frame(
-            "@time=2026-10-26T00:00:00Z :n!u@h PRIVMSG #ops :hello there\r\n",
-        )
-        .unwrap();
+        let msg =
+            parse_frame("@time=2026-10-26T00:00:00Z :n!u@h PRIVMSG #ops :hello there\r\n").unwrap();
         assert_eq!(msg.tags, Some("time=2026-10-26T00:00:00Z"));
         assert_eq!(msg.prefix, Some("n!u@h"));
         assert_eq!(msg.params(), &["#ops", "hello there"]);
@@ -231,11 +237,17 @@ mod tests {
     #[test]
     fn rejects_malformed_and_unsafe_frames() {
         assert_eq!(parse_frame("PING :test\n"), Err(FrameError::MissingCrlf));
-        assert_eq!(parse_frame("PING :a\nb\r\n"), Err(FrameError::ForbiddenControl));
+        assert_eq!(
+            parse_frame("PING :a\nb\r\n"),
+            Err(FrameError::ForbiddenControl)
+        );
         assert_eq!(parse_frame("@bad\r\n"), Err(FrameError::MalformedTags));
         assert_eq!(parse_frame(":bad\r\n"), Err(FrameError::MalformedPrefix));
         assert_eq!(parse_frame("TH!NG :x\r\n"), Err(FrameError::InvalidCommand));
-        assert_eq!(parse_frame("PRIVMSG #a :\u{202e}spoof\r\n"), Err(FrameError::ForbiddenControl));
+        assert_eq!(
+            parse_frame("PRIVMSG #a :\u{202e}spoof\r\n"),
+            Err(FrameError::ForbiddenControl)
+        );
     }
 
     #[test]
@@ -243,10 +255,7 @@ mod tests {
         let wire = ":irc 372 scout :\x02Welcome\x0f to \x03Ergo\r\n";
         let parsed = parse_frame(wire).unwrap();
         assert_eq!(parsed.command, "372");
-        assert_eq!(
-            sanitize_display_text(parsed.params()[1]),
-            "Welcome to Ergo"
-        );
+        assert_eq!(sanitize_display_text(parsed.params()[1]), "Welcome to Ergo");
         assert_eq!(
             encode_privmsg("#ops", parsed.params()[1]),
             Err(FrameError::ForbiddenControl)
@@ -287,14 +296,23 @@ mod tests {
 
     #[test]
     fn encoder_rejects_crlf_injection_and_oversize() {
-        assert_eq!(encode_privmsg("#ops", "hello\r\nOPER root"), Err(FrameError::ForbiddenControl));
-        assert_eq!(encode_privmsg("#bad target", "hi"), Err(FrameError::InvalidTarget));
+        assert_eq!(
+            encode_privmsg("#ops", "hello\r\nOPER root"),
+            Err(FrameError::ForbiddenControl)
+        );
+        assert_eq!(
+            encode_privmsg("#bad target", "hi"),
+            Err(FrameError::InvalidTarget)
+        );
         assert_eq!(encode_privmsg("#ops", ""), Err(FrameError::EmptyText));
         assert_eq!(
             encode_privmsg("#ops", &"x".repeat(600)),
             Err(FrameError::OverlongLine)
         );
-        assert_eq!(encode_privmsg("#ops", "hello").unwrap(), "PRIVMSG #ops :hello\r\n");
+        assert_eq!(
+            encode_privmsg("#ops", "hello").unwrap(),
+            "PRIVMSG #ops :hello\r\n"
+        );
     }
 
     #[test]
@@ -302,7 +320,8 @@ mod tests {
         let prefix_len = "PRIVMSG #a :\r\n".len();
         assert_eq!(
             encode_privmsg("#a", &"x".repeat(MAX_BASE_BYTES - prefix_len))
-                .unwrap().len(),
+                .unwrap()
+                .len(),
             MAX_BASE_BYTES
         );
         let frame = encode_privmsg("#a", "café").unwrap();

@@ -10,9 +10,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use rcgen::{generate_simple_self_signed, CertifiedKey};
-use rusti_client::credential_ref::{
-    CredentialPurpose, CredentialRef, ProtectedCredentialStore,
-};
+use rusti_client::credential_ref::{CredentialPurpose, CredentialRef, ProtectedCredentialStore};
 use rusti_client::ClientConfig;
 use rusti_transport_tls::cancel::RegistrationCancellation;
 use rusti_transport_tls::{Timeouts, TlsIrcSession, TransportError};
@@ -50,24 +48,27 @@ fn lab(peer: Peer) -> (SocketAddr, RootCertStore, thread::JoinHandle<bool>) {
     let mut roots = RootCertStore::empty();
     roots.add(cert.der().clone()).unwrap();
 
-    let cfg = ServerConfig::builder_with_provider(
-        Arc::new(rustls::crypto::ring::default_provider()),
-    )
-    .with_safe_default_protocol_versions()
-    .unwrap()
-    .with_no_client_auth()
-    .with_single_cert(
-        vec![cert.der().clone()],
-        PrivatePkcs8KeyDer::from(signing_key.serialize_der()).into(),
-    )
-    .unwrap();
+    let cfg =
+        ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+            .with_safe_default_protocol_versions()
+            .unwrap()
+            .with_no_client_auth()
+            .with_single_cert(
+                vec![cert.der().clone()],
+                PrivatePkcs8KeyDer::from(signing_key.serialize_der()).into(),
+            )
+            .unwrap();
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let address = listener.local_addr().unwrap();
     let server = thread::spawn(move || {
-        let Ok((tcp, _)) = listener.accept() else { return false };
+        let Ok((tcp, _)) = listener.accept() else {
+            return false;
+        };
         let _ = tcp.set_read_timeout(Some(Duration::from_secs(2)));
         let _ = tcp.set_write_timeout(Some(Duration::from_secs(2)));
-        let Ok(conn) = ServerConnection::new(Arc::new(cfg)) else { return false };
+        let Ok(conn) = ServerConnection::new(Arc::new(cfg)) else {
+            return false;
+        };
         let mut tls = StreamOwned::new(conn, tcp);
 
         // Both ordinary and SASL registration send three initial lines.
@@ -140,14 +141,24 @@ fn sasl_silent_peer_times_out_before_three_second_io_limit() {
     let store = NeverReadStore(AtomicUsize::new(0));
     let start = Instant::now();
     let result = client.register_sasl_plain(
-        "tester", "tester", "tester", &credential(address.port()), &store,
+        "tester",
+        "tester",
+        "tester",
+        &credential(address.port()),
+        &store,
         Duration::from_millis(230),
     );
-    assert!(matches!(result, Err(TransportError::RegistrationTimedOut)), "{result:?}");
+    assert!(
+        matches!(result, Err(TransportError::RegistrationTimedOut)),
+        "{result:?}"
+    );
     assert!(start.elapsed() < Duration::from_secs(2));
     assert_eq!(store.0.load(Ordering::SeqCst), 0);
     assert!(!client.is_registered());
-    assert!(matches!(client.send_privmsg("#ops", "no"), Err(TransportError::NotRegistered)));
+    assert!(matches!(
+        client.send_privmsg("#ops", "no"),
+        Err(TransportError::NotRegistered)
+    ));
     assert!(server.join().unwrap());
 }
 
@@ -157,10 +168,17 @@ fn sasl_trickled_partial_frame_cannot_extend_deadline() {
     let mut client = connect(address, roots);
     let store = NeverReadStore(AtomicUsize::new(0));
     let result = client.register_sasl_plain(
-        "tester", "tester", "tester", &credential(address.port()), &store,
+        "tester",
+        "tester",
+        "tester",
+        &credential(address.port()),
+        &store,
         Duration::from_millis(260),
     );
-    assert!(matches!(result, Err(TransportError::RegistrationTimedOut)), "{result:?}");
+    assert!(
+        matches!(result, Err(TransportError::RegistrationTimedOut)),
+        "{result:?}"
+    );
     assert_eq!(store.0.load(Ordering::SeqCst), 0);
     assert!(!client.is_registered());
     assert!(server.join().unwrap());
@@ -179,17 +197,29 @@ fn cancelled_sasl_wait_terminates_socket_and_disables_retry() {
     let store = NeverReadStore(AtomicUsize::new(0));
     let start = Instant::now();
     let result = client.register_sasl_plain_cancellable(
-        "tester", "tester", "tester", &credential(address.port()), &store,
-        Duration::from_secs(2), &cancel,
+        "tester",
+        "tester",
+        "tester",
+        &credential(address.port()),
+        &store,
+        Duration::from_secs(2),
+        &cancel,
     );
     worker.join().unwrap();
-    assert!(matches!(result, Err(TransportError::RegistrationCancelled)), "{result:?}");
+    assert!(
+        matches!(result, Err(TransportError::RegistrationCancelled)),
+        "{result:?}"
+    );
     assert!(start.elapsed() < Duration::from_secs(1));
     assert_eq!(store.0.load(Ordering::SeqCst), 0);
     assert!(!client.is_registered());
     assert!(matches!(
         client.register_sasl_plain(
-            "tester", "tester", "tester", &credential(address.port()), &store,
+            "tester",
+            "tester",
+            "tester",
+            &credential(address.port()),
+            &store,
             Duration::from_secs(1)
         ),
         Err(TransportError::RegistrationAlreadyAttempted)
@@ -202,12 +232,21 @@ fn ordinary_cap_registration_obeys_same_absolute_deadline() {
     let (address, roots, server) = lab(Peer::Silent);
     let mut client = connect(address, roots);
     let result = client.register_with_capabilities(
-        "tester", "tester", &["message-tags"], &[],
+        "tester",
+        "tester",
+        &["message-tags"],
+        &[],
         Duration::from_millis(220),
     );
-    assert!(matches!(result, Err(TransportError::RegistrationTimedOut)), "{result:?}");
+    assert!(
+        matches!(result, Err(TransportError::RegistrationTimedOut)),
+        "{result:?}"
+    );
     assert!(!client.is_registered());
-    assert!(matches!(client.join("#ops"), Err(TransportError::NotRegistered)));
+    assert!(matches!(
+        client.join("#ops"),
+        Err(TransportError::NotRegistered)
+    ));
     assert!(server.join().unwrap());
 }
 
@@ -222,12 +261,22 @@ fn cancelled_ordinary_registration_never_falls_back() {
         signal.cancel();
     });
     let result = client.register_with_capabilities_cancellable(
-        "tester", "tester", &[], &[],
-        Duration::from_secs(2), &cancel,
+        "tester",
+        "tester",
+        &[],
+        &[],
+        Duration::from_secs(2),
+        &cancel,
     );
     worker.join().unwrap();
-    assert!(matches!(result, Err(TransportError::RegistrationCancelled)), "{result:?}");
+    assert!(
+        matches!(result, Err(TransportError::RegistrationCancelled)),
+        "{result:?}"
+    );
     assert!(!client.is_registered());
-    assert!(matches!(client.send_privmsg("#ops", "no"), Err(TransportError::NotRegistered)));
+    assert!(matches!(
+        client.send_privmsg("#ops", "no"),
+        Err(TransportError::NotRegistered)
+    ));
     assert!(server.join().unwrap());
 }

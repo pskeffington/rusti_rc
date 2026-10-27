@@ -44,7 +44,9 @@ pub struct RegistrationFlow {
 /// A larger allowed character set needs a separate interoperability review.
 fn valid_atom(s: &str) -> bool {
     let mut bytes = s.bytes();
-    let Some(first) = bytes.next() else { return false };
+    let Some(first) = bytes.next() else {
+        return false;
+    };
     s.len() <= 24
         && first.is_ascii_alphabetic()
         && bytes.all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
@@ -112,12 +114,17 @@ impl RegistrationFlow {
         &mut self,
         frame: &ParsedMessage<'_>,
     ) -> Result<Option<String>, RegistrationError> {
-        if matches!(self.state, RegistrationState::Idle | RegistrationState::Failed) {
+        if matches!(
+            self.state,
+            RegistrationState::Idle | RegistrationState::Failed
+        ) {
             return Err(RegistrationError::InvalidState);
         }
         if frame.command.eq_ignore_ascii_case("PING") {
             let params = frame.params();
-            if params.len() != 1 || params[0].is_empty() || params[0].len() > 256
+            if params.len() != 1
+                || params[0].is_empty()
+                || params[0].len() > 256
                 || !params[0].bytes().all(|b| (0x20..=0x7e).contains(&b))
             {
                 self.state = RegistrationState::Failed;
@@ -129,8 +136,17 @@ impl RegistrationFlow {
         if frame.command.eq_ignore_ascii_case("ERROR")
             || matches!(
                 frame.command,
-                "431" | "432" | "433" | "436" | "451" | "462" | "463" | "464" | "465"
-                    | "466" | "410"
+                "431"
+                    | "432"
+                    | "433"
+                    | "436"
+                    | "451"
+                    | "462"
+                    | "463"
+                    | "464"
+                    | "465"
+                    | "466"
+                    | "410"
             )
         {
             self.state = RegistrationState::Failed;
@@ -235,9 +251,8 @@ mod tests {
 
     #[test]
     fn negotiates_before_accepting_welcome() {
-        let mut flow = RegistrationFlow::new(
-            "Scout_1", "scout", &["message-tags"], &["server-time"],
-        ).unwrap();
+        let mut flow =
+            RegistrationFlow::new("Scout_1", "scout", &["message-tags"], &["server-time"]).unwrap();
         assert_eq!(
             flow.start().unwrap(),
             [
@@ -263,9 +278,7 @@ mod tests {
 
     #[test]
     fn happy_path_registers_only_after_cap_end_write() {
-        let mut flow = RegistrationFlow::new(
-            "Scout", "scout", &["message-tags"], &[],
-        ).unwrap();
+        let mut flow = RegistrationFlow::new("Scout", "scout", &["message-tags"], &[]).unwrap();
         flow.start().unwrap();
         feed(&mut flow, "CAP * LS :message-tags\r\n").unwrap();
         assert_eq!(
@@ -275,14 +288,18 @@ mod tests {
         flow.cap_end_written().unwrap();
         feed(&mut flow, ":irc 001 Scout :Welcome\r\n").unwrap();
         assert!(flow.is_registered());
-        assert_eq!(flow.capabilities().iter().map(String::as_str).collect::<Vec<_>>(), vec!["message-tags"]);
+        assert_eq!(
+            flow.capabilities()
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            vec!["message-tags"]
+        );
     }
 
     #[test]
     fn optional_only_legacy_server_works_without_cap() {
-        let mut flow = RegistrationFlow::new(
-            "Scout", "scout", &[], &["multi-prefix"],
-        ).unwrap();
+        let mut flow = RegistrationFlow::new("Scout", "scout", &[], &["multi-prefix"]).unwrap();
         flow.start().unwrap();
         feed(&mut flow, ":irc 421 Scout CAP :Unknown command\r\n").unwrap();
         assert_eq!(flow.state(), RegistrationState::AwaitingWelcome);
@@ -293,9 +310,7 @@ mod tests {
 
     #[test]
     fn missing_mandatory_cap_does_not_downgrade() {
-        let mut flow = RegistrationFlow::new(
-            "Scout", "scout", &["message-tags"], &[],
-        ).unwrap();
+        let mut flow = RegistrationFlow::new("Scout", "scout", &["message-tags"], &[]).unwrap();
         flow.start().unwrap();
         assert_eq!(
             feed(&mut flow, ":irc 421 Scout CAP :Unknown command\r\n"),
@@ -359,9 +374,7 @@ mod tests {
 
     #[test]
     fn required_cap_revocation_terminates_ready_session() {
-        let mut flow = RegistrationFlow::new(
-            "Scout", "scout", &["message-tags"], &[],
-        ).unwrap();
+        let mut flow = RegistrationFlow::new("Scout", "scout", &["message-tags"], &[]).unwrap();
         flow.start().unwrap();
         feed(&mut flow, "CAP * LS :message-tags\r\n").unwrap();
         feed(&mut flow, "CAP Scout ACK :message-tags\r\n").unwrap();
@@ -369,7 +382,9 @@ mod tests {
         feed(&mut flow, ":irc 001 Scout :welcome\r\n").unwrap();
         assert_eq!(
             feed(&mut flow, ":irc CAP Scout DEL :message-tags\r\n"),
-            Err(RegistrationError::Capability(CapError::RequiredCapabilityRemoved))
+            Err(RegistrationError::Capability(
+                CapError::RequiredCapabilityRemoved
+            ))
         );
         assert_eq!(flow.state(), RegistrationState::Failed);
     }

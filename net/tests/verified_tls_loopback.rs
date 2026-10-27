@@ -21,7 +21,9 @@ fn launch_lab_server(
     let CertifiedKey { cert, signing_key } =
         generate_simple_self_signed(vec!["localhost".to_owned()]).expect("lab certificate");
     let mut trust = RootCertStore::empty();
-    trust.add(cert.der().clone()).expect("synthetic trust anchor");
+    trust
+        .add(cert.der().clone())
+        .expect("synthetic trust anchor");
 
     let provider = Arc::new(rustls::crypto::ring::default_provider());
     let server_config = ServerConfig::builder_with_provider(provider)
@@ -70,7 +72,10 @@ fn authenticated_local_tls_supports_bounded_ping_reply_without_registration() {
         let outcome = client
             .read_once(|frame| {
                 received.push(frame.map(|msg| {
-                    (msg.command.to_owned(), msg.params().first().unwrap_or(&"").to_string())
+                    (
+                        msg.command.to_owned(),
+                        msg.params().first().unwrap_or(&"").to_string(),
+                    )
                 }));
             })
             .expect("synthetic receive");
@@ -83,7 +88,10 @@ fn authenticated_local_tls_supports_bounded_ping_reply_without_registration() {
         client.pong("synthetic"),
         Ok(Submission::SubmittedUnconfirmed)
     ));
-    let sent = server.join().expect("server completes").expect("server saw line");
+    let sent = server
+        .join()
+        .expect("server completes")
+        .expect("server saw line");
     assert!(sent.contains("PONG :synthetic\r\n"));
 }
 
@@ -92,7 +100,10 @@ fn wrong_certificate_name_fails_closed_before_irc_is_sent() {
     let (addr, roots, server) = launch_lab_server(b"PING :synthetic\r\n");
     let result =
         TlsIrcSession::connect_tls(&cfg(addr, "irc.invalid"), addr, roots, Timeouts::default());
-    assert!(result.is_err(), "certificate with only localhost SAN must not authenticate irc.invalid");
+    assert!(
+        result.is_err(),
+        "certificate with only localhost SAN must not authenticate irc.invalid"
+    );
     let _ = server.join();
 }
 
@@ -104,9 +115,15 @@ fn untrusted_certificate_fails_closed() {
     let mut unrelated = RootCertStore::empty();
     unrelated.add(cert.der().clone()).unwrap();
     let result = TlsIrcSession::connect_tls(
-        &cfg(addr, "localhost"), addr, unrelated, Timeouts::default(),
+        &cfg(addr, "localhost"),
+        addr,
+        unrelated,
+        Timeouts::default(),
     );
-    assert!(result.is_err(), "a different trust root must not authenticate localhost");
+    assert!(
+        result.is_err(),
+        "a different trust root must not authenticate localhost"
+    );
     let _ = server.join();
 }
 
@@ -116,20 +133,32 @@ fn disabled_transport_and_plaintext_downgrade_never_open_a_socket() {
     listener.set_nonblocking(true).unwrap();
     let addr = listener.local_addr().unwrap();
     let disabled = ClientConfig {
-        enabled: false, ..cfg(addr, "localhost")
+        enabled: false,
+        ..cfg(addr, "localhost")
     };
     assert!(matches!(
         TlsIrcSession::connect_tls(&disabled, addr, RootCertStore::empty(), Timeouts::default()),
         Err(TransportError::Policy(ClientError::Disabled))
     ));
     let plaintext = ClientConfig {
-        tls_required: false, ..cfg(addr, "localhost")
+        tls_required: false,
+        ..cfg(addr, "localhost")
     };
     assert!(matches!(
-        TlsIrcSession::connect_tls(&plaintext, addr, RootCertStore::empty(), Timeouts::default()),
-        Err(TransportError::Policy(ClientError::InsecureTransportForbidden))
+        TlsIrcSession::connect_tls(
+            &plaintext,
+            addr,
+            RootCertStore::empty(),
+            Timeouts::default()
+        ),
+        Err(TransportError::Policy(
+            ClientError::InsecureTransportForbidden
+        ))
     ));
-    assert_eq!(listener.accept().unwrap_err().kind(), std::io::ErrorKind::WouldBlock);
+    assert_eq!(
+        listener.accept().unwrap_err().kind(),
+        std::io::ErrorKind::WouldBlock
+    );
 }
 
 #[test]
@@ -169,7 +198,12 @@ fn wrong_port_or_invalid_timeout_fails_before_socket() {
         ..Timeouts::default()
     };
     assert!(matches!(
-        TlsIrcSession::connect_tls(&cfg(addr, "localhost"), addr, RootCertStore::empty(), bad_time),
+        TlsIrcSession::connect_tls(
+            &cfg(addr, "localhost"),
+            addr,
+            RootCertStore::empty(),
+            bad_time
+        ),
         Err(TransportError::InvalidTimeouts)
     ));
 }

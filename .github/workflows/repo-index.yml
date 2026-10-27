@@ -51,3 +51,25 @@ jobs:
   # No dependency install, indexing service, API credentials, embedded vectors,
   # remote crawler, generated public archive, or production IPC is involved.
   # Machine metadata is not a release/security approval.
+
+  # Keep source-only formatting separate from network or hardware tests.
+  # This job is read-only and uses one pinned formatter for all workspaces.
+  rustfmt-check:
+    name: Rustfmt 1.90.0 / portable + TLS + fuzz
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install pinned formatter
+        shell: bash
+        run: rustup toolchain install 1.90.0 --profile minimal --component rustfmt
+      - name: Verify Rust formatting without rewriting files
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo +1.90.0 fmt --all --manifest-path Cargo.toml -- --check
+          cargo +1.90.0 fmt --all --manifest-path net/Cargo.toml -- --check
+          cargo +1.90.0 fmt --all --manifest-path fuzz/Cargo.toml -- --check

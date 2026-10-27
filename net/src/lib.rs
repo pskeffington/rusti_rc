@@ -1,28 +1,30 @@
 //! Explicit, verified-TLS IRC transport for the standalone modern workspace.
 //!
 //! Importing this crate performs no I/O. Only an explicit connect_tls call
-//! opens a socket. It has no plaintext fallback, SASL, privileged actions,
-//! background retries, server listener, or persistent chat history.
+//! opens a socket. It has no plaintext fallback, background retries,
+//! server listener, privileged actions, or persistent chat history.
+//! SASL PLAIN is opt-in, available only after certificate-verified TLS;
+//! a server account is never a Rust Boy organizational authorization.
 //! Successful writes are submitted/unconfirmed, not delivery receipts.
 #![forbid(unsafe_code)]
 
-mod registration;
-mod sasl;
 pub mod cancel;
 #[cfg(feature = "os-keyring")]
 pub mod native_store;
+mod registration;
+mod sasl;
 
 use std::io::{self, Read, Write};
 use std::net::{Shutdown, SocketAddr, TcpStream};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use rusti_client::{ClientConfig, ClientError};
 use crate::cancel::RegistrationCancellation;
+use rusti_client::{ClientConfig, ClientError};
 use rusti_proto::decoder::FrameDecoder;
-use rusti_proto::{cap::CAP_LS_302, encode_privmsg, FrameError, ParsedMessage};
 use rusti_proto::registration::{RegistrationError, RegistrationFlow};
 use rusti_proto::sasl::{SaslError, SaslStage};
+use rusti_proto::{cap::CAP_LS_302, encode_privmsg, FrameError, ParsedMessage};
 use rustls::pki_types::ServerName;
 use rustls::{ClientConnection, RootCertStore, StreamOwned};
 
@@ -57,19 +59,29 @@ pub enum TransportError {
 }
 
 impl From<io::Error> for TransportError {
-    fn from(value: io::Error) -> Self { Self::Io(value) }
+    fn from(value: io::Error) -> Self {
+        Self::Io(value)
+    }
 }
 impl From<rustls::Error> for TransportError {
-    fn from(value: rustls::Error) -> Self { Self::Tls(value) }
+    fn from(value: rustls::Error) -> Self {
+        Self::Tls(value)
+    }
 }
 impl From<FrameError> for TransportError {
-    fn from(value: FrameError) -> Self { Self::Frame(value) }
+    fn from(value: FrameError) -> Self {
+        Self::Frame(value)
+    }
 }
 impl From<RegistrationError> for TransportError {
-    fn from(value: RegistrationError) -> Self { Self::Registration(value) }
+    fn from(value: RegistrationError) -> Self {
+        Self::Registration(value)
+    }
 }
 impl From<SaslError> for TransportError {
-    fn from(value: SaslError) -> Self { Self::Sasl(value) }
+    fn from(value: SaslError) -> Self {
+        Self::Sasl(value)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -132,7 +144,8 @@ fn handshake(
         let remaining = deadline.saturating_duration_since(Instant::now());
         if remaining.is_zero() {
             return Err(TransportError::Io(io::Error::new(
-                io::ErrorKind::TimedOut, "TLS handshake deadline exceeded",
+                io::ErrorKind::TimedOut,
+                "TLS handshake deadline exceeded",
             )));
         }
         tcp.set_read_timeout(Some(remaining))?;
@@ -150,7 +163,8 @@ fn handshake(
     let remaining = deadline.saturating_duration_since(Instant::now());
     if remaining.is_zero() {
         return Err(TransportError::Io(io::Error::new(
-            io::ErrorKind::TimedOut, "TLS handshake deadline exceeded",
+            io::ErrorKind::TimedOut,
+            "TLS handshake deadline exceeded",
         )));
     }
     tcp.set_write_timeout(Some(remaining))?;
@@ -226,6 +240,25 @@ impl TlsIrcSession {
         })
     }
 
+    /// The sole transition into an IRC registration attempt. CAP and SASL
+    /// registration share this terminal error policy. The callback runs only
+    /// after the attempt is consumed, and a failed preflight closes the socket
+    /// instead of allowing a second registration or anonymous downgrade.
+    fn run_registration_once<F>(&mut self, attempt: F) -> Result<(), TransportError>
+    where
+        F: FnOnce(&mut Self) -> Result<(), TransportError>,
+    {
+        if self.registered || self.registration_attempted {
+            return Err(TransportError::RegistrationAlreadyAttempted);
+        }
+        self.registration_attempted = true;
+        let result = attempt(self).and_then(|()| self.restore_session_timeouts());
+        if result.is_err() {
+            self.abort_registration_connection();
+        }
+        result
+    }
+
     /// Bound every blocking read by the operator's whole-registration
     /// deadline and a short cancellation poll. A slow peer cannot refresh
     /// the deadline by sending isolated bytes. Both timeout forms returned
@@ -290,7 +323,9 @@ impl TlsIrcSession {
     /// Basic IRC registration, without PASS or SASL. The operator must
     /// inspect responses before issuing JOIN or sending messages.
     pub fn register_nick_user(
-        &mut self, nickname: &str, username: &str,
+        &mut self,
+        nickname: &str,
+        username: &str,
     ) -> Result<Submission, TransportError> {
         if !safe_atom(nickname) || !safe_atom(username) {
             return Err(TransportError::InvalidIdentifier);
@@ -300,7 +335,9 @@ impl TlsIrcSession {
     }
 
     pub fn join(&mut self, channel: &str) -> Result<Submission, TransportError> {
-        if channel.len() < 2 || channel.len() > 65 || !channel.starts_with('#')
+        if channel.len() < 2
+            || channel.len() > 65
+            || !channel.starts_with('#')
             || !safe_atom(&channel[1..])
         {
             return Err(TransportError::InvalidIdentifier);
@@ -311,9 +348,7 @@ impl TlsIrcSession {
         self.write_frame(&format!("JOIN {}\r\n", channel))
     }
 
-    pub fn send_privmsg(
-        &mut self, target: &str, body: &str,
-    ) -> Result<Submission, TransportError> {
+    pub fn send_privmsg(&mut self, target: &str, body: &str) -> Result<Submission, TransportError> {
         let wire = encode_privmsg(target, body)?;
         if !self.registered {
             return Err(TransportError::NotRegistered);
@@ -322,7 +357,8 @@ impl TlsIrcSession {
     }
 
     pub fn pong(&mut self, token: &str) -> Result<Submission, TransportError> {
-        if token.is_empty() || token.len() > 256
+        if token.is_empty()
+            || token.len() > 256
             || !token.bytes().all(|b| (0x20..=0x7e).contains(&b))
         {
             return Err(TransportError::InvalidIdentifier);
@@ -364,11 +400,13 @@ impl TlsIrcSession {
                                 let params = frame.params();
                                 let revoked = (frame.command == "CAP"
                                     && params.get(1) == Some(&"DEL")
-                                    && params.get(2).is_some_and(|v|
-                                        v.split_whitespace().any(|name| name == "sasl")))
+                                    && params.get(2).is_some_and(|v| {
+                                        v.split_whitespace().any(|name| name == "sasl")
+                                    }))
                                     || frame.command == "901";
                                 if revoked {
-                                    error = Some(TransportError::Sasl(SaslError::CapabilityRevoked));
+                                    error =
+                                        Some(TransportError::Sasl(SaslError::CapabilityRevoked));
                                     return;
                                 }
                             }
@@ -394,7 +432,12 @@ impl TlsIrcSession {
                 }
                 Ok(Receive::Data(n))
             }
-            Err(e) if matches!(e.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut) => {
+            Err(e)
+                if matches!(
+                    e.kind(),
+                    io::ErrorKind::WouldBlock | io::ErrorKind::TimedOut
+                ) =>
+            {
                 Ok(Receive::TimedOut)
             }
             Err(e) => {
@@ -402,7 +445,7 @@ impl TlsIrcSession {
                 self.sasl_required = false;
                 self.registration = None;
                 Err(TransportError::Io(e))
-            },
+            }
         }
     }
 }
@@ -411,8 +454,11 @@ impl TlsIrcSession {
 /// IRC compatibility is a later explicit interoperability gate.
 fn safe_atom(s: &str) -> bool {
     let mut bytes = s.bytes();
-    let Some(first) = bytes.next() else { return false };
-    s.len() <= 24 && first.is_ascii_alphabetic()
+    let Some(first) = bytes.next() else {
+        return false;
+    };
+    s.len() <= 24
+        && first.is_ascii_alphabetic()
         && bytes.all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
 }
 
@@ -423,13 +469,26 @@ mod tests {
     #[test]
     fn bounded_timeouts() {
         assert!(Timeouts::default().validate().is_ok());
-        assert!(Timeouts { io: Duration::ZERO, ..Timeouts::default() }.validate().is_err());
-        assert!(Timeouts { tcp_connect: Duration::from_secs(60), ..Timeouts::default() }.validate().is_err());
+        assert!(Timeouts {
+            io: Duration::ZERO,
+            ..Timeouts::default()
+        }
+        .validate()
+        .is_err());
+        assert!(Timeouts {
+            tcp_connect: Duration::from_secs(60),
+            ..Timeouts::default()
+        }
+        .validate()
+        .is_err());
     }
 
     #[test]
     fn no_empty_root_store() {
-        assert!(matches!(client_tls_config(RootCertStore::empty()), Err(TransportError::EmptyTrustRoots)));
+        assert!(matches!(
+            client_tls_config(RootCertStore::empty()),
+            Err(TransportError::EmptyTrustRoots)
+        ));
         assert!(!bundled_web_roots().roots.is_empty());
     }
 

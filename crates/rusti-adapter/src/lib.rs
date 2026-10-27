@@ -1,4 +1,8 @@
-//! Rust Boy integration preview. No network, role escalation, or task actions.
+//! Read-only, untrusted IRC display preview for potential Rust Boy import.
+//!
+//! This portable crate never connects to IRC, assigns tasks, or authorizes
+//! vault, peer, clinical, or organizational actions. Sanitized text is for
+//! plain-text rendering only; nicknames remain unverified remote labels.
 #![forbid(unsafe_code)]
 
 use rusti_proto::{parse_frame, sanitize_display_text, FrameError};

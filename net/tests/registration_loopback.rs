@@ -8,9 +8,7 @@ use std::sync::Arc;
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use rcgen::{
-    date_time_ymd, CertificateParams, KeyPair,
-};
+use rcgen::{date_time_ymd, CertificateParams, KeyPair};
 use rusti_client::ClientConfig;
 use rusti_proto::cap::CapError;
 use rusti_proto::registration::RegistrationError;
@@ -96,10 +94,14 @@ fn start_server(script: Script) -> (SocketAddr, RootCertStore, JoinHandle<Vec<St
     let addr = listener.local_addr().unwrap();
     let worker = thread::spawn(move || {
         let mut observed = Vec::new();
-        let Ok((tcp, _)) = listener.accept() else { return observed };
+        let Ok((tcp, _)) = listener.accept() else {
+            return observed;
+        };
         let _ = tcp.set_read_timeout(Some(Duration::from_secs(3)));
         let _ = tcp.set_write_timeout(Some(Duration::from_secs(3)));
-        let Ok(server) = ServerConnection::new(Arc::new(cfg)) else { return observed };
+        let Ok(server) = ServerConnection::new(Arc::new(cfg)) else {
+            return observed;
+        };
         let mut tls = StreamOwned::new(server, tcp);
 
         // Expired/future certificate is rejected by the client handshake.
@@ -138,12 +140,16 @@ fn start_server(script: Script) -> (SocketAddr, RootCertStore, JoinHandle<Vec<St
 
         // Exercise genuine CAP 302 multiline LS handling.
         if tls.write_all(b":irc CAP * LS * :multi-prefix\r\n").is_err()
-            || tls.write_all(b":irc CAP * LS :message-tags server-time\r\n").is_err()
+            || tls
+                .write_all(b":irc CAP * LS :message-tags server-time\r\n")
+                .is_err()
         {
             return observed;
         }
 
-        let Some(req) = read_line(&mut tls) else { return observed };
+        let Some(req) = read_line(&mut tls) else {
+            return observed;
+        };
         observed.push(req);
         if observed[3] != "CAP REQ :message-tags server-time\r\n" {
             return observed;
@@ -156,10 +162,15 @@ fn start_server(script: Script) -> (SocketAddr, RootCertStore, JoinHandle<Vec<St
             return observed;
         }
 
-        if tls.write_all(b":irc CAP tester ACK :server-time message-tags\r\n").is_err() {
+        if tls
+            .write_all(b":irc CAP tester ACK :server-time message-tags\r\n")
+            .is_err()
+        {
             return observed;
         }
-        let Some(end) = read_line(&mut tls) else { return observed };
+        let Some(end) = read_line(&mut tls) else {
+            return observed;
+        };
         observed.push(end);
         if observed[4] != "CAP END\r\n" {
             return observed;
@@ -169,7 +180,9 @@ fn start_server(script: Script) -> (SocketAddr, RootCertStore, JoinHandle<Vec<St
         }
 
         if matches!(script, Script::Revoke) {
-            let Some(join) = read_line(&mut tls) else { return observed };
+            let Some(join) = read_line(&mut tls) else {
+                return observed;
+            };
             observed.push(join);
             let _ = tls.write_all(b":irc CAP tester DEL :message-tags\r\n");
             // Give client an opportunity to read before dropping connection.
@@ -179,7 +192,9 @@ fn start_server(script: Script) -> (SocketAddr, RootCertStore, JoinHandle<Vec<St
         }
 
         for _ in 0..2 {
-            let Some(line) = read_line(&mut tls) else { return observed };
+            let Some(line) = read_line(&mut tls) else {
+                return observed;
+            };
             observed.push(line);
         }
         observed
@@ -207,7 +222,10 @@ fn full_cap_and_welcome_then_join_and_channel_text() {
     let (addr, trust, server) = start_server(Script::Happy);
     let mut client = connect(addr, trust);
     assert!(!client.is_registered());
-    assert!(matches!(client.send_privmsg("#lab", "premature"), Err(TransportError::NotRegistered)));
+    assert!(matches!(
+        client.send_privmsg("#lab", "premature"),
+        Err(TransportError::NotRegistered)
+    ));
 
     client
         .register_with_capabilities(
@@ -219,7 +237,10 @@ fn full_cap_and_welcome_then_join_and_channel_text() {
         )
         .expect("CAP and numeric 001 registration");
     assert!(client.is_registered());
-    assert!(matches!(client.join("#lab"), Ok(Submission::SubmittedUnconfirmed)));
+    assert!(matches!(
+        client.join("#lab"),
+        Ok(Submission::SubmittedUnconfirmed)
+    ));
     assert!(matches!(
         client.send_privmsg("#lab", "hello"),
         Ok(Submission::SubmittedUnconfirmed)
@@ -228,10 +249,13 @@ fn full_cap_and_welcome_then_join_and_channel_text() {
     assert_eq!(
         lines,
         vec![
-            "CAP LS 302\r\n", "NICK tester\r\n",
+            "CAP LS 302\r\n",
+            "NICK tester\r\n",
             "USER tester 0 * :rusti_rc\r\n",
-            "CAP REQ :message-tags server-time\r\n", "CAP END\r\n",
-            "JOIN #lab\r\n", "PRIVMSG #lab :hello\r\n",
+            "CAP REQ :message-tags server-time\r\n",
+            "CAP END\r\n",
+            "JOIN #lab\r\n",
+            "PRIVMSG #lab :hello\r\n",
         ]
     );
 }
@@ -241,15 +265,28 @@ fn missing_required_cap_fails_closed() {
     let (addr, trust, server) = start_server(Script::MissingRequired);
     let mut client = connect(addr, trust);
     let error = client.register_with_capabilities(
-        "tester", "tester", &["message-tags"], &[],
+        "tester",
+        "tester",
+        &["message-tags"],
+        &[],
         Duration::from_secs(4),
     );
     assert!(matches!(
         error,
-        Err(TransportError::Registration(RegistrationError::Capability(CapError::MissingRequired)))
+        Err(TransportError::Registration(RegistrationError::Capability(
+            CapError::MissingRequired
+        )))
     ));
     assert!(!client.is_registered());
-    assert!(matches!(client.send_privmsg("#lab", "x"), Err(TransportError::NotRegistered)));
+    assert!(matches!(
+        client.send_privmsg("#lab", "x"),
+        Err(TransportError::NotRegistered)
+    ));
+    // Shared fail-closed wrapper permanently consumes this TLS session.
+    assert!(matches!(
+        client.register_with_capabilities("tester", "tester", &[], &[], Duration::from_secs(1),),
+        Err(TransportError::RegistrationAlreadyAttempted),
+    ));
     assert_eq!(server.join().unwrap().len(), 3);
 }
 
@@ -257,9 +294,15 @@ fn missing_required_cap_fails_closed() {
 fn legacy_server_only_when_no_required_capability() {
     let (addr, trust, server) = start_server(Script::NoCapLegacy);
     let mut client = connect(addr, trust);
-    client.register_with_capabilities(
-        "tester", "tester", &[], &["multi-prefix"], Duration::from_secs(4),
-    ).expect("explicit legacy IRC fallback without mandatory capability");
+    client
+        .register_with_capabilities(
+            "tester",
+            "tester",
+            &[],
+            &["multi-prefix"],
+            Duration::from_secs(4),
+        )
+        .expect("explicit legacy IRC fallback without mandatory capability");
     assert!(client.is_registered());
     assert_eq!(server.join().unwrap().len(), 3);
 }
@@ -269,12 +312,17 @@ fn premature_welcome_does_not_skip_cap_end() {
     let (addr, trust, server) = start_server(Script::PrematureWelcome);
     let mut client = connect(addr, trust);
     let error = client.register_with_capabilities(
-        "tester", "tester", &["message-tags"], &["server-time"],
+        "tester",
+        "tester",
+        &["message-tags"],
+        &["server-time"],
         Duration::from_secs(4),
     );
     assert!(matches!(
         error,
-        Err(TransportError::Registration(RegistrationError::UnexpectedWelcome))
+        Err(TransportError::Registration(
+            RegistrationError::UnexpectedWelcome
+        ))
     ));
     assert!(!client.is_registered());
     assert_eq!(server.join().unwrap().len(), 4);
@@ -284,10 +332,15 @@ fn premature_welcome_does_not_skip_cap_end() {
 fn mandatory_capability_revocation_blocks_further_channel_sends() {
     let (addr, trust, server) = start_server(Script::Revoke);
     let mut client = connect(addr, trust);
-    client.register_with_capabilities(
-        "tester", "tester", &["message-tags"], &["server-time"],
-        Duration::from_secs(4),
-    ).unwrap();
+    client
+        .register_with_capabilities(
+            "tester",
+            "tester",
+            &["message-tags"],
+            &["server-time"],
+            Duration::from_secs(4),
+        )
+        .unwrap();
     client.join("#lab").unwrap();
 
     let mut revocation_seen = false;
@@ -303,7 +356,10 @@ fn mandatory_capability_revocation_blocks_further_channel_sends() {
             Err(err) => panic!("unexpected error: {err:?}"),
         }
     }
-    assert!(revocation_seen, "required CAP DEL must be treated as revocation");
+    assert!(
+        revocation_seen,
+        "required CAP DEL must be treated as revocation"
+    );
     assert!(!client.is_registered());
     assert!(matches!(
         client.send_privmsg("#lab", "should not send"),

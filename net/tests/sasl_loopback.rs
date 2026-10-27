@@ -4,15 +4,13 @@
 
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener};
-use std::sync::{mpsc, Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
 use rcgen::{generate_simple_self_signed, CertifiedKey};
-use rusti_client::credential_ref::{
-    CredentialPurpose, CredentialRef, ProtectedCredentialStore,
-};
+use rusti_client::credential_ref::{CredentialPurpose, CredentialRef, ProtectedCredentialStore};
 use rusti_client::ClientConfig;
 use rusti_transport_tls::cancel::RegistrationCancellation;
 use rusti_transport_tls::{Submission, Timeouts, TlsIrcSession, TransportError};
@@ -56,32 +54,33 @@ fn read_line(tls: &mut StreamOwned<ServerConnection, std::net::TcpStream>) -> Op
     }
 }
 
-fn lab(
-    mode: Mode,
-) -> (SocketAddr, RootCertStore, thread::JoinHandle<bool>) {
+fn lab(mode: Mode) -> (SocketAddr, RootCertStore, thread::JoinHandle<bool>) {
     let CertifiedKey { cert, signing_key } =
         generate_simple_self_signed(vec!["localhost".to_owned()]).unwrap();
     let mut root = RootCertStore::empty();
     root.add(cert.der().clone()).unwrap();
-    let cfg = ServerConfig::builder_with_provider(
-        Arc::new(rustls::crypto::ring::default_provider()),
-    )
-    .with_safe_default_protocol_versions()
-    .unwrap()
-    .with_no_client_auth()
-    .with_single_cert(
-        vec![cert.der().clone()],
-        PrivatePkcs8KeyDer::from(signing_key.serialize_der()).into(),
-    )
-    .unwrap();
+    let cfg =
+        ServerConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+            .with_safe_default_protocol_versions()
+            .unwrap()
+            .with_no_client_auth()
+            .with_single_cert(
+                vec![cert.der().clone()],
+                PrivatePkcs8KeyDer::from(signing_key.serialize_der()).into(),
+            )
+            .unwrap();
 
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let addr = listener.local_addr().unwrap();
     let worker = thread::spawn(move || {
-        let Ok((tcp, _)) = listener.accept() else { return false };
+        let Ok((tcp, _)) = listener.accept() else {
+            return false;
+        };
         tcp.set_read_timeout(Some(Duration::from_secs(3))).ok();
         tcp.set_write_timeout(Some(Duration::from_secs(3))).ok();
-        let Ok(conn) = ServerConnection::new(Arc::new(cfg)) else { return false };
+        let Ok(conn) = ServerConnection::new(Arc::new(cfg)) else {
+            return false;
+        };
         let mut tls = StreamOwned::new(conn, tcp);
 
         for expected in [
@@ -98,7 +97,10 @@ fn lab(
             return tls.write_all(b":irc CAP * LS :sasl=EXTERNAL\r\n").is_ok();
         }
 
-        if tls.write_all(b":irc CAP * LS :sasl=EXTERNAL,PLAIN\r\n").is_err() {
+        if tls
+            .write_all(b":irc CAP * LS :sasl=EXTERNAL,PLAIN\r\n")
+            .is_err()
+        {
             return false;
         }
         if read_line(&mut tls).as_deref() != Some("CAP REQ :sasl\r\n") {
@@ -124,14 +126,18 @@ fn lab(
         }
         // Read and check the sensitive command without returning it or
         // recording it in a test artifact or failure message.
-        let Some(encoded) = read_line(&mut tls) else { return false };
+        let Some(encoded) = read_line(&mut tls) else {
+            return false;
+        };
         // Test fixture generated offline; expected value is not a real secret.
         if encoded != "AUTHENTICATE AHRlc3RlcgBzeW50aGV0aWMtdGVzdC1wYXNzd29yZA==\r\n" {
             return false;
         }
 
         if matches!(mode, Mode::Reject) {
-            return tls.write_all(b":irc 904 tester :Invalid account\r\n").is_ok();
+            return tls
+                .write_all(b":irc 904 tester :Invalid account\r\n")
+                .is_ok();
         }
         if tls.write_all(b":irc 903 tester :SASL success\r\n").is_err() {
             return false;
@@ -164,7 +170,13 @@ fn session(addr: SocketAddr, roots: RootCertStore) -> TlsIrcSession {
 }
 
 fn reference(port: u16) -> CredentialRef {
-    CredentialRef::new("test_op", "localhost", port, CredentialPurpose::SaslPassword).unwrap()
+    CredentialRef::new(
+        "test_op",
+        "localhost",
+        port,
+        CredentialPurpose::SaslPassword,
+    )
+    .unwrap()
 }
 
 #[test]
@@ -172,15 +184,23 @@ fn verified_tls_sasl_then_irc_registration_and_channel_send() {
     let (addr, roots, server) = lab(Mode::Success);
     let mut tls = session(addr, roots);
     let result = tls.register_sasl_plain(
-        "tester", "tester", "tester",
+        "tester",
+        "tester",
+        "tester",
         &reference(addr.port()),
         &SyntheticStore,
         Duration::from_secs(5),
     );
-    assert!(result.is_ok(), "secure test login should complete: {result:?}");
+    assert!(
+        result.is_ok(),
+        "secure test login should complete: {result:?}"
+    );
     assert!(tls.is_registered());
     assert_eq!(tls.join("#lab").unwrap(), Submission::SubmittedUnconfirmed);
-    assert_eq!(tls.send_privmsg("#lab", "hello").unwrap(), Submission::SubmittedUnconfirmed);
+    assert_eq!(
+        tls.send_privmsg("#lab", "hello").unwrap(),
+        Submission::SubmittedUnconfirmed
+    );
     assert!(server.join().unwrap());
 }
 
@@ -189,7 +209,9 @@ fn missing_plain_mechanism_fails_without_secret_transmission() {
     let (addr, roots, server) = lab(Mode::NoPlain);
     let mut tls = session(addr, roots);
     let err = tls.register_sasl_plain(
-        "tester", "tester", "tester",
+        "tester",
+        "tester",
+        "tester",
         &reference(addr.port()),
         &SyntheticStore,
         Duration::from_secs(5),
@@ -204,7 +226,9 @@ fn failed_sasl_never_registers_anonymously() {
     let (addr, roots, server) = lab(Mode::Reject);
     let mut tls = session(addr, roots);
     let err = tls.register_sasl_plain(
-        "tester", "tester", "tester",
+        "tester",
+        "tester",
+        "tester",
         &reference(addr.port()),
         &SyntheticStore,
         Duration::from_secs(5),
@@ -212,7 +236,25 @@ fn failed_sasl_never_registers_anonymously() {
     assert!(err.is_err());
     assert!(!tls.is_registered());
     assert!(matches!(
-        tls.send_privmsg("#lab", "not sent"), Err(TransportError::NotRegistered)
+        tls.send_privmsg("#lab", "not sent"),
+        Err(TransportError::NotRegistered)
+    ));
+    // A rejected SASL attempt cannot switch the same TLS connection to
+    // anonymous IRC or try another password.
+    assert!(matches!(
+        tls.register_with_capabilities("tester", "tester", &[], &[], Duration::from_secs(1),),
+        Err(TransportError::RegistrationAlreadyAttempted),
+    ));
+    assert!(matches!(
+        tls.register_sasl_plain(
+            "tester",
+            "tester",
+            "tester",
+            &reference(addr.port()),
+            &SyntheticStore,
+            Duration::from_secs(1),
+        ),
+        Err(TransportError::RegistrationAlreadyAttempted),
     ));
     assert!(server.join().unwrap());
 }
@@ -221,10 +263,16 @@ fn failed_sasl_never_registers_anonymously() {
 fn premature_welcome_is_not_sasl_success() {
     let (addr, roots, server) = lab(Mode::PrematureWelcome);
     let mut tls = session(addr, roots);
-    assert!(tls.register_sasl_plain(
-        "tester", "tester", "tester",
-        &reference(addr.port()), &SyntheticStore, Duration::from_secs(5),
-    ).is_err());
+    assert!(tls
+        .register_sasl_plain(
+            "tester",
+            "tester",
+            "tester",
+            &reference(addr.port()),
+            &SyntheticStore,
+            Duration::from_secs(5),
+        )
+        .is_err());
     assert!(!tls.is_registered());
     assert!(server.join().unwrap());
 }
@@ -243,7 +291,9 @@ impl ProtectedCredentialStore for DelayedLookupStore {
         F: FnOnce(&[u8]) -> R,
     {
         self.calls.fetch_add(1, Ordering::SeqCst);
-        self.entered.send(()).expect("test cancellation worker still alive");
+        self.entered
+            .send(())
+            .expect("test cancellation worker still alive");
         self.resume
             .lock()
             .unwrap()
@@ -276,17 +326,27 @@ fn cancellation_during_blocking_secret_lookup_prevents_payload_transmission() {
         resume_tx.send(()).expect("release blocked callback");
     });
     let result = tls.register_sasl_plain_cancellable(
-        "tester", "tester", "tester",
-        &reference(addr.port()), &store,
-        Duration::from_secs(4), &token,
+        "tester",
+        "tester",
+        "tester",
+        &reference(addr.port()),
+        &store,
+        Duration::from_secs(4),
+        &token,
     );
     worker.join().unwrap();
-    assert!(matches!(result, Err(TransportError::RegistrationCancelled)), "{result:?}");
+    assert!(
+        matches!(result, Err(TransportError::RegistrationCancelled)),
+        "{result:?}"
+    );
     assert_eq!(store.calls.load(Ordering::SeqCst), 1);
     assert!(!tls.is_registered());
     assert!(matches!(
         tls.send_privmsg("#lab", "must never send"),
         Err(TransportError::NotRegistered)
     ));
-    assert!(server.join().unwrap(), "no credential frame may be sent after cancellation");
+    assert!(
+        server.join().unwrap(),
+        "no credential frame may be sent after cancellation"
+    );
 }

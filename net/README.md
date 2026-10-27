@@ -7,12 +7,13 @@
 - `net/Cargo.toml`: maintained `rustls = 0.23.46`, explicit `ring` provider, `webpki-roots = 1.0.9`; `rcgen` is used **only in tests** to create ephemeral in-memory localhost certificates.
 - `net/src/lib.rs`: `TlsIrcSession::connect_tls` takes a validated `rusti_client::ClientConfig`, a concrete IP/port `SocketAddr`, a reviewed `RootCertStore`, and bounded timeouts. **Calling it is an explicit network action.** There is no DNS lookup, provider guessing, certificate-skip option, plaintext fallback, discovery, or automatic reconnect. SASL PLAIN is an explicit separate registration mode using a validated credential reference.
 - `TlsIrcSession` offers bounded read callbacks, explicit CAP registration over authenticated TLS, JOIN, PING/PONG response, and `PRIVMSG`. JOIN and PRIVMSG reject sends until IRC registration succeeds, and a mandatory capability's revocation disables sending. A write reports `SubmittedUnconfirmed`, never Rust Boy `STORED`.
-- `register_with_capabilities` remains the anonymous, non-SASL registration mode. `register_sasl_plain` is a separate **opt-in**, blocking worker-context flow and refuses missing PLAIN, bad SASL, early 001, and TLS trust errors without downgrading. See [G2d design](../docs/architecture/G2D_SASL_NATIVE_CREDENTIALS.md).
+- `register_with_capabilities` is intentionally anonymous, while `register_sasl_plain` is the separate **opt-in**, blocking SASL PLAIN flow. Both use the private `TlsIrcSession::run_registration_once` guard: one attempt, restore timeouts only on success, and terminal socket shutdown on error. Missing PLAIN, rejected SASL, premature 001, and TLS trust errors never become an anonymous downgrade. See [G2d design](../docs/architecture/G2D_SASL_NATIVE_CREDENTIALS.md).
 - `net/tests/verified_tls_loopback.rs` generates ephemeral certificates in memory and validates success, hostname mismatch, untrusted roots, preflight TLS policy, and safe message framing on localhost. Synthetic TLS tests and Clippy passed in the [Linux/macOS/Windows locked G2b CI matrix](https://github.com/pskeffington/rusti_rc/actions/runs/40443606042) (3/3). The original TLS client merged in [PR #3](https://github.com/pskeffington/rusti_rc/pull/3); explicit registration and certificate-validity tests merged in [PR #4](https://github.com/pskeffington/rusti_rc/pull/4).
 
 ## Offline-only test on a development machine
 
 ```sh
+cargo +1.90.0 fmt --all --manifest-path net/Cargo.toml -- --check
 cargo +stable test --manifest-path net/Cargo.toml --all-targets --locked
 cargo +stable clippy --manifest-path net/Cargo.toml --all-targets --locked -- -D warnings
 # On macOS/Windows, compile/test optional native secure-store feature (no real secrets)
@@ -35,10 +36,9 @@ Do not use the current transport for clinical records, safety-of-life messaging,
 - [G2f cancellable IRC/CAP and SASL registration](src/cancel.rs) now uses a monotonic overall deadline and terminal failure shutdown; [silent-peer, trickle and cancellation regression tests](tests/registration_interruptions.rs) cover verified TLS localhost cases. The opt-in APIs do **not** launch threads or retries. See [G2f security and legacy deployment gates](../docs/architecture/G2F_REGISTRATION_HARDWARE_GATES.md).
 - [Offline legacy host preflight](../scripts/legacy_host_preflight.sh) reports only coarse capability hints; hardware approval is always blocked until real-device testing.
 - Broader IRC registration and capability edge cases across a second independent IRCd. [Ergo interoperability](../.github/workflows/ergo-interop.yml) has already passed using a digest-pinned server image.
-- Test actual native macOS/Windows secret provisioning, retrieval, rotation and denial; separately validate SASL account login/failure against independent IRCd. G2e independently validated synthetic-account registration and SASL on Ergo, but real native OS keyring lifecycle remains open.
+- Test actual native macOS/Windows secret provisioning, retrieval, rotation and denial. Ergo **already passed** synthetic-account SASL success/failure; a second independent IRCd and real native OS keyring lifecycle remain open.
 - Security and license audit, vulnerabilities/SBOM, and hardening against slow peers and reconnect floods. Cargo.lock is already pinned.
-- [Ergo interoperability test](tests/ergo_interop.rs) passed in the [isolated, digest-pinned Docker CI job](https://github.com/pskeffington/rusti_rc/actions/runs/40444811673); read [G2c evidence](../docs/architecture/G2C_INDEPENDENT_IRCD_CREDENTIALS.md).
-- Feature-gated [macOS/Windows native credential adapter](src/native_store.rs) is implemented and compile/negative-tested, while the portable [CredentialRef](../crates/rusti-client/src/credential_ref.rs) itself remains a no-I/O identity handle. Linux headless protected storage and actual OS-backed secret lifecycle are pending.
+ - Feature-gated [macOS/Windows native credential adapter](src/native_store.rs) is implemented and compile/negative-tested, while the portable [CredentialRef](../crates/rusti-client/src/credential_ref.rs) itself remains a no-I/O identity handle. Linux headless protected storage and actual OS-backed secret lifecycle are pending.
 - Actual Pi/older host hardware tests and signed offline redeployment.
 - Optional, feature-gated Rust Boy LINK import only after verified integration acceptance.
 

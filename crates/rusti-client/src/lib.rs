@@ -1,8 +1,12 @@
-//! Rust IRC client policy boundary; no socket implementation in this scaffold.
+//! Portable Rust 1.70 client policy and credential-reference boundaries.
+//!
+//! Holds disabled-by-default endpoint policy and explicit retry decisions;
+//! it never opens sockets or resolves secrets. The separate `net/` workspace
+//! implements opt-in TLS sessions and optional native desktop keychain access.
 #![forbid(unsafe_code)]
 
-pub mod recovery;
 pub mod credential_ref;
+pub mod recovery;
 
 use std::net::IpAddr;
 
@@ -91,7 +95,10 @@ mod tests {
 
     #[test]
     fn client_import_and_defaults_do_not_connect() {
-        assert_eq!(ClientConfig::default().request_connect(), Err(ClientError::Disabled));
+        assert_eq!(
+            ClientConfig::default().request_connect(),
+            Err(ClientError::Disabled)
+        );
     }
 
     #[test]
@@ -102,7 +109,10 @@ mod tests {
             ..ClientConfig::default()
         };
         config.tls_required = false;
-        assert_eq!(config.request_connect(), Err(ClientError::InsecureTransportForbidden));
+        assert_eq!(
+            config.request_connect(),
+            Err(ClientError::InsecureTransportForbidden)
+        );
     }
 
     #[test]
@@ -112,7 +122,10 @@ mod tests {
             server_host: "192.168.0.5".into(),
             ..ClientConfig::default()
         };
-        assert_eq!(config.request_connect(), Err(ClientError::NetworkingNotImplemented));
+        assert_eq!(
+            config.request_connect(),
+            Err(ClientError::NetworkingNotImplemented)
+        );
     }
 
     #[test]

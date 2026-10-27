@@ -101,9 +101,7 @@ impl RecoveryPolicy {
         let delay = base.saturating_mul(1u64 << exponent).min(cap);
         let window = (delay / 4).max(1);
         let jitter = jitter_seed % (window + 1);
-        RecoveryDecision::RetryAfter(Duration::from_millis(
-            delay.saturating_add(jitter).min(cap),
-        ))
+        RecoveryDecision::RetryAfter(Duration::from_millis(delay.saturating_add(jitter).min(cap)))
     }
 }
 
@@ -160,7 +158,10 @@ mod tests {
             p.decide(FailureKind::TcpTimeout, 1, true, 27),
             p.decide(FailureKind::TcpTimeout, 1, true, 27)
         );
-        let bad = RecoveryPolicy { max_attempts: 0, ..p };
+        let bad = RecoveryPolicy {
+            max_attempts: 0,
+            ..p
+        };
         assert_eq!(
             bad.decide(FailureKind::TcpTimeout, 1, true, 27),
             RecoveryDecision::Stop(StopReason::Disabled)

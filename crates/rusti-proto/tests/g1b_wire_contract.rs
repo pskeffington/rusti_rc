@@ -32,7 +32,10 @@ fn metadata_and_names_never_assert_identity() {
 #[test]
 fn tag_unescape_is_data_not_an_outbound_command() {
     let text = unescape_tag_value(r"evil\r\nOPER root");
-    assert_eq!(encode_privmsg("#ops", &text), Err(FrameError::ForbiddenControl));
+    assert_eq!(
+        encode_privmsg("#ops", &text),
+        Err(FrameError::ForbiddenControl)
+    );
 }
 
 #[test]

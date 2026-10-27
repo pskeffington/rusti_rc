@@ -73,14 +73,23 @@ mod tests {
         let raw = "foo=old;invalid@key=anything;foo=new;Foo=capital";
         assert_eq!(last_tag(raw, "foo").unwrap().raw_value, Some("new"));
         assert_eq!(last_tag(raw, "Foo").unwrap().raw_value, Some("capital"));
-        assert_eq!(last_tag(raw, "invalid@key").unwrap().raw_value, Some("anything"));
+        assert_eq!(
+            last_tag(raw, "invalid@key").unwrap().raw_value,
+            Some("anything")
+        );
         assert_eq!(last_tag(raw, "missing"), None);
     }
 
     #[test]
     fn missing_and_empty_tag_values_are_equivalent() {
-        assert_eq!(last_tag("foo;bar=", "foo").unwrap().normalized_raw_value(), None);
-        assert_eq!(last_tag("foo;bar=", "bar").unwrap().normalized_raw_value(), None);
+        assert_eq!(
+            last_tag("foo;bar=", "foo").unwrap().normalized_raw_value(),
+            None
+        );
+        assert_eq!(
+            last_tag("foo;bar=", "bar").unwrap().normalized_raw_value(),
+            None
+        );
     }
 
     #[test]
