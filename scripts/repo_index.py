@@ -122,7 +122,7 @@ def load_catalog(root):
 def tracked_paths(root):
     try:
         output = subprocess.run(
-            ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+            ["git", "ls-files", "--cached", "-z"],
             cwd=str(root), check=True, stdout=subprocess.PIPE,
             stderr=subprocess.PIPE, timeout=15,
         ).stdout
