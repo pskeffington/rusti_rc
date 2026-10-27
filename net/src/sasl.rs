@@ -134,19 +134,11 @@ impl TlsIrcSession {
         timeout: Duration,
         cancel: &RegistrationCancellation,
     ) -> Result<(), TransportError> {
-        if self.registered || self.registration_attempted {
-            return Err(TransportError::RegistrationAlreadyAttempted);
-        }
-        // One attempted registration consumes this stream even if cancelled
-        // before sending any IRC protocol bytes.
-        self.registration_attempted = true;
-        let result = self.register_sasl_plain_inner(
-            nickname, username, account, credential, store, timeout, cancel,
-        ).and_then(|()| self.restore_session_timeouts());
-        if result.is_err() {
-            self.abort_registration_connection();
-        }
-        result
+        self.run_registration_once(|session| {
+            session.register_sasl_plain_inner(
+                nickname, username, account, credential, store, timeout, cancel,
+            )
+        })
     }
 
     #[allow(clippy::too_many_arguments)]
