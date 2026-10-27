@@ -10,7 +10,6 @@ mod registration;
 mod sasl;
 #[cfg(feature = "os-keyring")]
 pub mod native_store;
-mod sasl;
 
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpStream};
@@ -21,7 +20,7 @@ use rusti_client::{ClientConfig, ClientError};
 use rusti_proto::decoder::FrameDecoder;
 use rusti_proto::{cap::CAP_LS_302, encode_privmsg, FrameError, ParsedMessage};
 use rusti_proto::registration::{RegistrationError, RegistrationFlow};
-use rusti_proto::sasl::{SaslError, SaslPlainFlow};
+use rusti_proto::sasl::SaslError;
 use rustls::pki_types::ServerName;
 use rustls::{ClientConnection, RootCertStore, StreamOwned};
 
