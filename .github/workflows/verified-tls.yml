@@ -50,6 +50,12 @@ jobs:
       - name: Lint TLS workspace
         shell: bash
         run: cargo +stable clippy --manifest-path net/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Compile and test opt-in native credential adapter
+        if: matrix.os != 'ubuntu-22.04'
+        shell: bash
+        run: |
+          cargo +stable test --manifest-path net/Cargo.toml --all-targets --all-features --locked
+          cargo +stable clippy --manifest-path net/Cargo.toml --all-targets --all-features --locked -- -D warnings
 
   # Source-only protocol still uses the independent Rust 1.70 root workflow.
   # This TLS workflow does not grant credentials, deploy binaries, create

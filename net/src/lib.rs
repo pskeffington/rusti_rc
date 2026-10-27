@@ -7,6 +7,9 @@
 #![forbid(unsafe_code)]
 
 mod registration;
+mod sasl;
+#[cfg(feature = "os-keyring")]
+pub mod native_store;
 
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpStream};
@@ -17,6 +20,7 @@ use rusti_client::{ClientConfig, ClientError};
 use rusti_proto::decoder::FrameDecoder;
 use rusti_proto::{cap::CAP_LS_302, encode_privmsg, FrameError, ParsedMessage};
 use rusti_proto::registration::{RegistrationError, RegistrationFlow};
+use rusti_proto::sasl::SaslError;
 use rustls::pki_types::ServerName;
 use rustls::{ClientConnection, RootCertStore, StreamOwned};
 
@@ -41,6 +45,10 @@ pub enum TransportError {
     RegistrationAlreadyAttempted,
     RegistrationResponseOverflow,
     NotRegistered,
+    Sasl(SaslError),
+    CredentialUnavailable,
+    CredentialPolicy,
+    InvalidCredential,
 }
 
 impl From<io::Error> for TransportError {
@@ -54,6 +62,9 @@ impl From<FrameError> for TransportError {
 }
 impl From<RegistrationError> for TransportError {
     fn from(value: RegistrationError) -> Self { Self::Registration(value) }
+}
+impl From<SaslError> for TransportError {
+    fn from(value: SaslError) -> Self { Self::Sasl(value) }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -164,6 +175,11 @@ pub struct TlsIrcSession {
     registered: bool,
     registration_attempted: bool,
     registration: Option<RegistrationFlow>,
+    /// The original authenticated TLS name/port, never user-supplied again.
+    authenticated_host: String,
+    authenticated_port: u16,
+    /// Active SASL must never silently downgrade on logout or CAP DEL.
+    sasl_required: bool,
 }
 
 impl TlsIrcSession {
@@ -197,6 +213,9 @@ impl TlsIrcSession {
             registered: false,
             registration_attempted: false,
             registration: None,
+            authenticated_host: client.server_host.clone(),
+            authenticated_port: client.server_port,
+            sasl_required: false,
         })
     }
 
@@ -269,6 +288,7 @@ impl TlsIrcSession {
         match self.stream.read(&mut chunk) {
             Ok(0) => {
                 self.registered = false;
+                self.sasl_required = false;
                 self.registration = None;
                 self.decoder.finish()?;
                 Ok(Receive::Closed)
@@ -277,6 +297,7 @@ impl TlsIrcSession {
                 let mut on_frame = on_frame;
                 let mut error: Option<TransportError> = None;
                 let registration = &mut self.registration;
+                let sasl_required = self.sasl_required;
                 self.decoder.push(&chunk[..n], |event| {
                     if error.is_some() {
                         return;
@@ -287,6 +308,18 @@ impl TlsIrcSession {
                             return;
                         }
                         Ok(frame) => {
+                            if sasl_required {
+                                let params = frame.params();
+                                let revoked = (frame.command == "CAP"
+                                    && params.get(1) == Some(&"DEL")
+                                    && params.get(2).is_some_and(|v|
+                                        v.split_whitespace().any(|name| name == "sasl")))
+                                    || frame.command == "901";
+                                if revoked {
+                                    error = Some(TransportError::Sasl(SaslError::CapabilityRevoked));
+                                    return;
+                                }
+                            }
                             if let Some(flow) = registration.as_mut() {
                                 if frame.command.eq_ignore_ascii_case("CAP")
                                     || frame.command.eq_ignore_ascii_case("ERROR")
@@ -303,6 +336,7 @@ impl TlsIrcSession {
                 });
                 if let Some(failure) = error {
                     self.registered = false;
+                    self.sasl_required = false;
                     self.registration = None;
                     return Err(failure);
                 }
@@ -313,6 +347,7 @@ impl TlsIrcSession {
             }
             Err(e) => {
                 self.registered = false;
+                self.sasl_required = false;
                 self.registration = None;
                 Err(TransportError::Io(e))
             },
