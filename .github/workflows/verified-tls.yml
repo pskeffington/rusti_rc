@@ -57,6 +57,22 @@ jobs:
           cargo +stable test --manifest-path net/Cargo.toml --all-targets --all-features --locked
           cargo +stable clippy --manifest-path net/Cargo.toml --all-targets --all-features --locked -- -D warnings
 
+      - name: Validate read-only legacy hardware capability probe
+        if: matrix.os == 'ubuntu-22.04'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sh -n scripts/legacy_host_preflight.sh
+          sh scripts/legacy_host_preflight.sh > "${RUNNER_TEMP}/rusti-legacy-preflight.txt"
+          grep -qx 'probe=g2f-legacy-offline-v1' "${RUNNER_TEMP}/rusti-legacy-preflight.txt"
+          grep -qx 'network_activity=none' "${RUNNER_TEMP}/rusti-legacy-preflight.txt"
+          grep -qx 'credential_provider=unverified' "${RUNNER_TEMP}/rusti-legacy-preflight.txt"
+          grep -qx 'field_deployment=blocked' "${RUNNER_TEMP}/rusti-legacy-preflight.txt"
+          # Probe does not print any usernames, hostnames, keys or serials.
+          if grep -Ei '^(hostname|username|device_serial|key_material|password)=' "${RUNNER_TEMP}/rusti-legacy-preflight.txt"; then
+            exit 1
+          fi
+
   # Source-only protocol still uses the independent Rust 1.70 root workflow.
   # This TLS workflow does not grant credentials, deploy binaries, create
   # trusted release bundles or claim legacy-target/hardware support.

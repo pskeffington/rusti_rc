@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 
 use rusti_proto::registration::{RegistrationFlow, RegistrationState};
 
+use crate::cancel::RegistrationCancellation;
 use crate::{Receive, TlsIrcSession, TransportError};
 
 const MAX_REGISTRATION_TIMEOUT: Duration = Duration::from_secs(30);
@@ -30,31 +31,60 @@ impl TlsIrcSession {
         optional: &[&str],
         timeout: Duration,
     ) -> Result<(), TransportError> {
+        self.register_with_capabilities_cancellable(
+            nickname, username, required, optional, timeout,
+            &RegistrationCancellation::new(),
+        )
+    }
+
+    /// Operator-invoked registration with a shared cancellation token.
+    /// A timeout or cancellation closes the TLS socket; never silently
+    /// resume negotiation or reuse the stream for anonymous chat.
+    pub fn register_with_capabilities_cancellable(
+        &mut self,
+        nickname: &str,
+        username: &str,
+        required: &[&str],
+        optional: &[&str],
+        timeout: Duration,
+        cancel: &RegistrationCancellation,
+    ) -> Result<(), TransportError> {
         if self.registered || self.registration_attempted {
             return Err(TransportError::RegistrationAlreadyAttempted);
         }
+        self.registration_attempted = true;
+        let result = self.register_with_capabilities_inner(
+            nickname, username, required, optional, timeout, cancel,
+        ).and_then(|()| self.restore_session_timeouts());
+        if result.is_err() {
+            self.abort_registration_connection();
+        }
+        result
+    }
+
+    fn register_with_capabilities_inner(
+        &mut self,
+        nickname: &str,
+        username: &str,
+        required: &[&str],
+        optional: &[&str],
+        timeout: Duration,
+        cancel: &RegistrationCancellation,
+    ) -> Result<(), TransportError> {
         if timeout < Duration::from_millis(50) || timeout > MAX_REGISTRATION_TIMEOUT {
             return Err(TransportError::InvalidTimeouts);
         }
-
         let mut flow = RegistrationFlow::new(nickname, username, required, optional)?;
         let initial = flow.start()?;
-        self.registration_attempted = true;
         let deadline = Instant::now() + timeout;
 
         for command in &initial {
-            if let Err(error) = self.write_frame(command) {
-                flow.abort();
-                return Err(error);
-            }
+            self.registration_step(deadline, cancel)?;
+            self.write_frame(command)?;
         }
 
         while flow.state() != RegistrationState::Registered {
-            if Instant::now() >= deadline {
-                flow.abort();
-                return Err(TransportError::RegistrationTimedOut);
-            }
-
+            self.registration_step(deadline, cancel)?;
             let mut actions: Vec<String> = Vec::new();
             let mut problem: Option<TransportError> = None;
             let result = self.read_once(|message| {
@@ -76,36 +106,32 @@ impl TlsIrcSession {
                     },
                 }
             });
-
             if let Some(error) = problem {
                 flow.abort();
                 return Err(error);
             }
-            let status = match result {
-                Ok(status) => status,
-                Err(error) => {
+            match result? {
+                Receive::Closed => {
                     flow.abort();
-                    return Err(error);
+                    return Err(TransportError::UnexpectedClose);
                 }
-            };
-            if matches!(status, Receive::Closed) {
-                flow.abort();
-                return Err(TransportError::UnexpectedClose);
+                Receive::Data(_) | Receive::TimedOut => {}
             }
+            // Prevent a late/partial frame from extending the operator's
+            // overall deadline or overriding a requested cancellation.
+            self.registration_step(deadline, cancel)?;
 
             for action in &actions {
-                if let Err(error) = self.write_frame(action) {
-                    flow.abort();
-                    return Err(error);
-                }
+                self.registration_step(deadline, cancel)?;
+                self.write_frame(action)?;
                 if action == "CAP END\r\n" {
                     flow.cap_end_written()?;
                 }
             }
         }
-
-        // Preserve negotiated required capabilities so a later CAP DEL can
-        // revoke the session instead of silently retaining a false trust state.
+        self.registration_step(deadline, cancel)?;
+        // Retain capabilities so a later server CAP DEL can revoke
+        // authorization for further channel submissions.
         self.registration = Some(flow);
         self.registered = true;
         Ok(())

@@ -47,6 +47,7 @@ These root-workspace commands do **not** connect to IRC. No third-party crates a
 - [G2c independent Ergo IRCd and credential-reference design](docs/architecture/G2C_INDEPENDENT_IRCD_CREDENTIALS.md)
 - [G2d SASL PLAIN and native credential-store matrix](docs/architecture/G2D_SASL_NATIVE_CREDENTIALS.md)
 - [G2e independent SASL account and headless legacy key matrix](docs/architecture/G2E_INDEPENDENT_SASL_LEGACY_KEYS.md)
+- [G2f bounded registration and legacy hardware acceptance](docs/architecture/G2F_REGISTRATION_HARDWARE_GATES.md)
 - [Architecture and phased development roadmap](docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md)
 - [G1b protocol implementation and pending evidence](docs/security/G1B_PROTOCOL_EVIDENCE.md)
 - [Nightly-only isolated fuzz harness](fuzz/README.md)
