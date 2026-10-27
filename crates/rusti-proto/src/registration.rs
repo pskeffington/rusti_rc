@@ -259,7 +259,7 @@ mod tests {
         flow.cap_end_written().unwrap();
         feed(&mut flow, ":irc 001 Scout :Welcome\r\n").unwrap();
         assert!(flow.is_registered());
-        assert_eq!(flow.capabilities(), &["message-tags"]);
+        assert_eq!(flow.capabilities().iter().map(String::as_str).collect::<Vec<_>>(), vec!["message-tags"]);
     }
 
     #[test]
