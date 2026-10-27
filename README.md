@@ -19,8 +19,8 @@ Build a modular IRC stack, independently distributable for portable Linux and ol
 | [rusti-testkit](crates/rusti-testkit/src/lib.rs) | Synthetic offline wire fixtures |
 | [standalone-cli](examples/standalone-cli/src/main.rs) | Offline smoke test only, prints fixture result |
 | [TLS networking preview](net/README.md) | Separate modern rustls/ring workspace: explicit verified TLS connection, basic IRC commands and localhost certificate tests; no Rust Boy import |
-| [Portable CI](.github/workflows/ci.yml) | [Run #26 passed 10/10](https://github.com/pskeffington/rusti_rc/actions/runs/40442639261): Rust 1.70/stable Linux/macOS/Windows and ARMv6/ARMv7/ARM64/musl compile-only checks |
-| [TLS CI](.github/workflows/verified-tls.yml) | [Run #10 passed 3/3](https://github.com/pskeffington/rusti_rc/actions/runs/40442639269): locked-dependency verified-TLS loopback tests and Clippy on Linux/macOS/Windows |
+| [Portable CI](.github/workflows/ci.yml) | [G2b run #33 passed 10/10](https://github.com/pskeffington/rusti_rc/actions/runs/40443606057): Rust 1.70/stable Linux/macOS/Windows and ARMv6/ARMv7/ARM64/musl compile-only checks |
+| [TLS CI](.github/workflows/verified-tls.yml) | [G2b run #18 passed 3/3](https://github.com/pskeffington/rusti_rc/actions/runs/40443606042): locked-dependency verified-TLS loopback tests and Clippy on Linux/macOS/Windows |
 
 ## Local scaffold test
 
