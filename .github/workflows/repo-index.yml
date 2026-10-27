@@ -51,3 +51,36 @@ jobs:
   # No dependency install, indexing service, API credentials, embedded vectors,
   # remote crawler, generated public archive, or production IPC is involved.
   # Machine metadata is not a release/security approval.
+
+  # Temporary, read-only formatting bootstrap. Remove before merging.
+  rustfmt-bootstrap-preview:
+    if: github.event_name == 'pull_request' && github.head_ref == 'development/code-cleanup-rustfmt-g3'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout PR without repository write permissions
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Use a pinned formatter to generate reviewable code only
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.90.0 --profile minimal --component rustfmt
+          cargo +1.90.0 fmt --all --manifest-path Cargo.toml
+          cargo +1.90.0 fmt --all --manifest-path net/Cargo.toml
+          cargo +1.90.0 fmt --all --manifest-path fuzz/Cargo.toml
+      - name: Print changed Rust source as UTF-8 JSON for one-time patching
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import subprocess
+          changed = subprocess.check_output(['git', 'diff', '--name-only', '--', '*.rs'], text=True).splitlines()
+          for path in changed:
+              if not path.endswith('.rs') or not Path(path).is_file():
+                  raise SystemExit('unexpected Rust source output')
+              print('RUSTI_FMT_BLOB_JSON=' + json.dumps({'path': path, 'contents': Path(path).read_text(encoding='utf-8')}, ensure_ascii=True, separators=(',', ':')))
+          print('RUSTI_FMT_CHANGED_COUNT=' + str(len(changed)))
+          PY
