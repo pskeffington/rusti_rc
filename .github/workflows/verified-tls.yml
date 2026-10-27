@@ -1,0 +1,56 @@
+name: Verified TLS transport (standalone workspace)
+
+on:
+  pull_request:
+    paths:
+      - net/**
+      - crates/rusti-proto/**
+      - crates/rusti-client/**
+      - Cargo.toml
+      - .github/workflows/verified-tls.yml
+  push:
+    branches: [main]
+    paths:
+      - net/**
+      - crates/rusti-proto/**
+      - crates/rusti-client/**
+      - Cargo.toml
+      - .github/workflows/verified-tls.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rusti-tls-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tls-loopback:
+    name: Verified TLS localhost / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-14, windows-2022]
+    steps:
+      - name: Checkout source without persisting tokens
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install stable toolchain and checks
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy --component rustfmt
+          cargo +stable --version
+          rustc +stable --version
+      - name: Verify isolated TLS crate and certificate rejection tests
+        shell: bash
+        run: cargo +stable test --manifest-path net/Cargo.toml --all-targets
+      - name: Lint TLS workspace
+        shell: bash
+        run: cargo +stable clippy --manifest-path net/Cargo.toml --all-targets -- -D warnings
+
+  # Source-only protocol still uses the independent Rust 1.70 root workflow.
+  # This TLS workflow does not grant credentials, deploy binaries, create
+  # trusted release bundles or claim legacy-target/hardware support.
