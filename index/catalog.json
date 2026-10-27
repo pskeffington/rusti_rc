@@ -1,0 +1,513 @@
+{
+  "schema": 1,
+  "project": "rusti_rc",
+  "modules": [
+    {
+      "id": "protocol",
+      "prefix": "crates/rusti-proto/",
+      "kind": "portable-rust",
+      "maturity": "tested-development",
+      "summary": "Bounded IRC frames, IRCv3 CAP, tags, registration and SASL state machines; no network I/O.",
+      "entrypoints": [
+        "crates/rusti-proto/src/lib.rs",
+        "crates/rusti-proto/src/registration.rs",
+        "crates/rusti-proto/src/sasl.rs"
+      ],
+      "docs": [
+        "docs/security/G1B_PROTOCOL_EVIDENCE.md",
+        "docs/architecture/G2B_REGISTRATION_RECOVERY.md"
+      ],
+      "topics": [
+        "irc",
+        "frames",
+        "tags",
+        "cap",
+        "sasl",
+        "parser"
+      ],
+      "trust_boundary": "Untrusted IRC text must never authorize Rust Boy actions."
+    },
+    {
+      "id": "client-policy",
+      "prefix": "crates/rusti-client/",
+      "kind": "portable-rust",
+      "maturity": "tested-development",
+      "summary": "Disabled connection policy, recovery decisions, and server-bound opaque credential references.",
+      "entrypoints": [
+        "crates/rusti-client/src/lib.rs",
+        "crates/rusti-client/src/recovery.rs",
+        "crates/rusti-client/src/credential_ref.rs"
+      ],
+      "docs": [
+        "docs/architecture/G2B_REGISTRATION_RECOVERY.md",
+        "docs/architecture/G2D_SASL_NATIVE_CREDENTIALS.md"
+      ],
+      "topics": [
+        "client",
+        "recovery",
+        "credentials",
+        "policy",
+        "retry"
+      ],
+      "trust_boundary": "Credential references are not secrets and recovery proposals do not trigger I/O."
+    },
+    {
+      "id": "server-policy",
+      "prefix": "crates/rusti-server/",
+      "kind": "portable-rust",
+      "maturity": "policy-only-no-listener",
+      "summary": "Loopback-only and disabled-by-default local IRC server policy; no implemented listener.",
+      "entrypoints": [
+        "crates/rusti-server/src/lib.rs"
+      ],
+      "docs": [
+        "docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md"
+      ],
+      "topics": [
+        "server",
+        "listener",
+        "loopback",
+        "quota"
+      ],
+      "trust_boundary": "Do not claim a live IRC server or enable public binds."
+    },
+    {
+      "id": "rustboy-adapter",
+      "prefix": "crates/rusti-adapter/",
+      "kind": "portable-rust",
+      "maturity": "read-only-preview",
+      "summary": "Untrusted IRC chat inspection and safe text display for possible Rust Boy LINK integration.",
+      "entrypoints": [
+        "crates/rusti-adapter/src/lib.rs"
+      ],
+      "docs": [
+        "docs/integration/RUST_BOY_ADAPTER_CONTRACT.md"
+      ],
+      "topics": [
+        "rustboy",
+        "link",
+        "adapter",
+        "display",
+        "trust"
+      ],
+      "trust_boundary": "IRC account, nickname and channel never grant Vault, task or organizational authority."
+    },
+    {
+      "id": "testkit",
+      "prefix": "crates/rusti-testkit/",
+      "kind": "portable-rust",
+      "maturity": "synthetic-fixtures",
+      "summary": "Offline deterministic protocol fixtures used by portable tests.",
+      "entrypoints": [
+        "crates/rusti-testkit/src/lib.rs"
+      ],
+      "docs": [
+        "docs/security/G1B_PROTOCOL_EVIDENCE.md"
+      ],
+      "topics": [
+        "fixtures",
+        "tests",
+        "wire"
+      ],
+      "trust_boundary": "No real credentials, locations or operator data in fixtures."
+    },
+    {
+      "id": "demo",
+      "prefix": "examples/standalone-cli/",
+      "kind": "offline-example",
+      "maturity": "offline-smoke",
+      "summary": "Standalone CLI demonstrating synthetic protocol fixtures without network access.",
+      "entrypoints": [
+        "examples/standalone-cli/src/main.rs"
+      ],
+      "docs": [
+        "README.md"
+      ],
+      "topics": [
+        "cli",
+        "demo",
+        "offline"
+      ],
+      "trust_boundary": "Demo startup must not open sockets."
+    },
+    {
+      "id": "tls-transport",
+      "prefix": "net/",
+      "kind": "separate-modern-rust-workspace",
+      "maturity": "tested-development-not-production",
+      "summary": "Explicit certificate-verified IRC over TLS; SASL, optional desktop keychain, cancellation and independent IRCd tests.",
+      "entrypoints": [
+        "net/src/lib.rs",
+        "net/src/registration.rs",
+        "net/src/sasl.rs",
+        "net/src/native_store.rs"
+      ],
+      "docs": [
+        "net/README.md",
+        "docs/architecture/G2F_REGISTRATION_HARDWARE_GATES.md",
+        "docs/security/G2_TLS_IMPLEMENTATION_EVIDENCE.md"
+      ],
+      "topics": [
+        "tls",
+        "sasl",
+        "rustls",
+        "keychain",
+        "irc",
+        "transport",
+        "authentication"
+      ],
+      "trust_boundary": "Verified TLS/SASL do not provide E2EE, receiver receipts or Rust Boy authorization."
+    },
+    {
+      "id": "fuzz",
+      "prefix": "fuzz/",
+      "kind": "isolated-nightly-workspace",
+      "maturity": "harness-authored-execution-pending",
+      "summary": "Nightly-only IRC frame fuzz harness separated from portable MSRV workspace.",
+      "entrypoints": [
+        "fuzz/fuzz_targets/irc_frames.rs"
+      ],
+      "docs": [
+        "fuzz/README.md"
+      ],
+      "topics": [
+        "fuzz",
+        "malformed",
+        "parser",
+        "security"
+      ],
+      "trust_boundary": "Harness existence is not proof of executed fuzz coverage."
+    },
+    {
+      "id": "release-lab",
+      "prefix": "scripts/",
+      "kind": "offline-laboratory",
+      "maturity": "lab-tested-not-installer",
+      "summary": "Read-only legacy host preflight and synthetic Ed25519 manifest verification; no installation or activation.",
+      "entrypoints": [
+        "scripts/legacy_host_preflight.sh",
+        "scripts/verify_offline_bundle_lab.py"
+      ],
+      "docs": [
+        "docs/deployment/G2G_SIGNED_BUNDLE_LAB.md",
+        "docs/deployment/LEGACY_COMPATIBILITY.md"
+      ],
+      "topics": [
+        "release",
+        "signature",
+        "ed25519",
+        "offline",
+        "rollback",
+        "preflight",
+        "legacy"
+      ],
+      "trust_boundary": "A successful lab signature check never authorizes a production update or protects a version floor."
+    },
+    {
+      "id": "deployment-schema",
+      "prefix": "deployment/",
+      "kind": "schema-only",
+      "maturity": "proposal-not-verifier",
+      "summary": "Candidate release metadata JSON Schema; not a trusted verifier, signer or installer.",
+      "entrypoints": [
+        "deployment/release-manifest.schema.json"
+      ],
+      "docs": [
+        "deployment/README.md",
+        "docs/deployment/OFFLINE_REDEPLOYMENT_RUNBOOK.md"
+      ],
+      "topics": [
+        "schema",
+        "deployment",
+        "manifest",
+        "release"
+      ],
+      "trust_boundary": "JSON Schema validity is not proof of signed authenticity or safe rollback."
+    },
+    {
+      "id": "documentation",
+      "prefix": "docs/",
+      "kind": "documentation",
+      "maturity": "mixed-implemented-and-proposed",
+      "summary": "Architecture, security evidence, compatibility decisions, deployment gates and integration contracts.",
+      "entrypoints": [
+        "docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md",
+        "docs/security/RELEASE_CHECKLIST.md",
+        "docs/research/IRC_LITERATURE_MATRIX.md"
+      ],
+      "docs": [
+        "docs/security/THREAT_MODEL.md",
+        "docs/integration/RUST_BOY_ADAPTER_CONTRACT.md"
+      ],
+      "topics": [
+        "architecture",
+        "research",
+        "security",
+        "releases",
+        "legacy",
+        "integration"
+      ],
+      "trust_boundary": "Proposed milestones and source claims are not automatically verified field capabilities."
+    },
+    {
+      "id": "ci",
+      "prefix": ".github/workflows/",
+      "kind": "automation",
+      "maturity": "active-ci",
+      "summary": "Portable tests, modern TLS, independent Ergo and signed-bundle laboratory checks.",
+      "entrypoints": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/verified-tls.yml",
+        ".github/workflows/ergo-interop.yml",
+        ".github/workflows/offline-release-lab.yml"
+      ],
+      "docs": [
+        "docs/security/RELEASE_CHECKLIST.md"
+      ],
+      "topics": [
+        "ci",
+        "tests",
+        "github-actions",
+        "interop",
+        "validation"
+      ],
+      "trust_boundary": "Cross-target cargo check does not demonstrate real hardware runtime or clinical reliability."
+    },
+    {
+      "id": "indexing",
+      "prefix": "index/",
+      "kind": "developer-tooling",
+      "maturity": "generated-and-ci-checked",
+      "summary": "Curated routing catalog and generated machine-readable repository inventory.",
+      "entrypoints": [
+        "index/catalog.json",
+        "index/MACHINE_INDEX.json"
+      ],
+      "docs": [
+        "docs/INDEX.md"
+      ],
+      "topics": [
+        "index",
+        "search",
+        "machine",
+        "agents",
+        "navigation"
+      ],
+      "trust_boundary": "Index metadata is not a trusted command source or a replacement for source review."
+    },
+    {
+      "id": "repository",
+      "prefix": "",
+      "kind": "repository-guidance",
+      "maturity": "active",
+      "summary": "Top-level navigation, licensing, contribution rules and workspace definition.",
+      "entrypoints": [
+        "README.md",
+        "AGENTS.md",
+        "Cargo.toml",
+        "CONTRIBUTING.md"
+      ],
+      "docs": [
+        "SECURITY.md",
+        "README.md"
+      ],
+      "topics": [
+        "overview",
+        "readme",
+        "license",
+        "agents",
+        "contributing"
+      ],
+      "trust_boundary": "Safety and release gates in SECURITY.md and the release checklist override summaries."
+    }
+  ],
+  "routes": [
+    {
+      "id": "irc-wire",
+      "terms": [
+        "irc frame",
+        "ircv3",
+        "decoder",
+        "message tags",
+        "ctcp"
+      ],
+      "primary": "crates/rusti-proto/src/lib.rs",
+      "related": [
+        "crates/rusti-proto/src/decoder.rs",
+        "crates/rusti-proto/src/tags.rs",
+        "docs/security/G1B_PROTOCOL_EVIDENCE.md"
+      ]
+    },
+    {
+      "id": "registration-cap",
+      "terms": [
+        "registration",
+        "capability negotiation",
+        "cap 302",
+        "welcome 001"
+      ],
+      "primary": "crates/rusti-proto/src/registration.rs",
+      "related": [
+        "net/src/registration.rs",
+        "docs/architecture/G2B_REGISTRATION_RECOVERY.md"
+      ]
+    },
+    {
+      "id": "sasl-account",
+      "terms": [
+        "sasl",
+        "authentication",
+        "nickserv",
+        "plain",
+        "903"
+      ],
+      "primary": "crates/rusti-proto/src/sasl.rs",
+      "related": [
+        "net/src/sasl.rs",
+        "net/tests/ergo_sasl.rs",
+        "docs/architecture/G2E_INDEPENDENT_SASL_LEGACY_KEYS.md"
+      ]
+    },
+    {
+      "id": "tls-network",
+      "terms": [
+        "tls",
+        "rustls",
+        "certificate",
+        "transport"
+      ],
+      "primary": "net/src/lib.rs",
+      "related": [
+        "net/README.md",
+        "net/tests/verified_tls_loopback.rs",
+        "docs/security/G2_TLS_IMPLEMENTATION_EVIDENCE.md"
+      ]
+    },
+    {
+      "id": "secret-management",
+      "terms": [
+        "keychain",
+        "credential",
+        "os keyring",
+        "secret",
+        "sasl password"
+      ],
+      "primary": "crates/rusti-client/src/credential_ref.rs",
+      "related": [
+        "net/src/native_store.rs",
+        "net/tests/native_keyring_lifecycle.rs",
+        "docs/architecture/G2D_SASL_NATIVE_CREDENTIALS.md"
+      ]
+    },
+    {
+      "id": "timeouts-recovery",
+      "terms": [
+        "cancellation",
+        "retry",
+        "timeout",
+        "slow peer",
+        "interruption"
+      ],
+      "primary": "net/src/cancel.rs",
+      "related": [
+        "net/tests/registration_interruptions.rs",
+        "crates/rusti-client/src/recovery.rs",
+        "docs/architecture/G2F_REGISTRATION_HARDWARE_GATES.md"
+      ]
+    },
+    {
+      "id": "rustboy-integration",
+      "terms": [
+        "rust boy",
+        "pip boy",
+        "link ui",
+        "vault",
+        "adapter",
+        "role"
+      ],
+      "primary": "docs/integration/RUST_BOY_ADAPTER_CONTRACT.md",
+      "related": [
+        "crates/rusti-adapter/src/lib.rs",
+        "docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md"
+      ]
+    },
+    {
+      "id": "local-ircd",
+      "terms": [
+        "server",
+        "listener",
+        "lan server",
+        "loopback"
+      ],
+      "primary": "crates/rusti-server/src/lib.rs",
+      "related": [
+        "docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md"
+      ]
+    },
+    {
+      "id": "hardware-legacy",
+      "terms": [
+        "raspberry pi",
+        "armv6",
+        "armv7",
+        "arm64",
+        "hardware",
+        "old linux",
+        "tpm"
+      ],
+      "primary": "docs/deployment/LEGACY_COMPATIBILITY.md",
+      "related": [
+        "scripts/legacy_host_preflight.sh",
+        "docs/architecture/G2F_REGISTRATION_HARDWARE_GATES.md"
+      ]
+    },
+    {
+      "id": "offline-release",
+      "terms": [
+        "offline install",
+        "bundle",
+        "signature",
+        "rollback",
+        "ed25519",
+        "sbom"
+      ],
+      "primary": "docs/deployment/G2G_SIGNED_BUNDLE_LAB.md",
+      "related": [
+        "scripts/verify_offline_bundle_lab.py",
+        "deployment/release-manifest.schema.json",
+        "docs/deployment/OFFLINE_REDEPLOYMENT_RUNBOOK.md"
+      ]
+    },
+    {
+      "id": "evidence-and-literature",
+      "terms": [
+        "literature",
+        "matrix",
+        "evidence",
+        "research",
+        "security review"
+      ],
+      "primary": "docs/research/IRC_LITERATURE_MATRIX.md",
+      "related": [
+        "docs/research/SECURITY_LEGACY_DEPLOYMENT_MATRIX.md",
+        "docs/security/RELEASE_CHECKLIST.md"
+      ]
+    },
+    {
+      "id": "testing-ci",
+      "terms": [
+        "ci",
+        "tests",
+        "interop",
+        "ergo",
+        "rust 1.70"
+      ],
+      "primary": ".github/workflows/ci.yml",
+      "related": [
+        ".github/workflows/verified-tls.yml",
+        ".github/workflows/ergo-interop.yml",
+        ".github/workflows/offline-release-lab.yml"
+      ]
+    }
+  ]
+}

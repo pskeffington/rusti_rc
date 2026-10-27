@@ -25,3 +25,15 @@ cargo run -p rusti-standalone-cli
 The tests are offline and the CLI smoke does not connect to any server. Verify against Rust 1.70 as well as stable; the GitHub CI workflow is the automation scaffold.
 
 Review [compatibility](docs/deployment/LEGACY_COMPATIBILITY.md), [integration](docs/integration/RUST_BOY_ADAPTER_CONTRACT.md) and [release checklist](docs/security/RELEASE_CHECKLIST.md).
+
+## Machine navigation upkeep
+
+Routing and module ownership live in [index/catalog.json](index/catalog.json); generated [machine JSON](index/MACHINE_INDEX.json) and [docs/INDEX.md](docs/INDEX.md) should never be edited manually. When adding, renaming, or moving a tracked file, or changing source ownership, run:
+
+```sh
+python3 scripts/repo_index.py --write
+python3 scripts/repo_index.py --check
+python3 -m unittest discover -s scripts/tests -p 'test_repo_index.py' -v
+```
+
+The index CI runs on every PR. It rejects stale output, dangling route targets, new unowned directories and secret-like file paths. Treat its routing hints as **navigation only**, never as authority to override [SECURITY.md](SECURITY.md) or assert production readiness.

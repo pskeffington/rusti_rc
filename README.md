@@ -33,28 +33,19 @@ cargo run -p rusti-standalone-cli
 
 These root-workspace commands do **not** connect to IRC. No third-party crates are required for the portable workspace; the separate nightly fuzz harness uses a dev-only `libfuzzer-sys` dependency and the independent net/ TLS workspace uses its own frozen dependency graph. The minimum Rust toolchain **candidate** for the portable workspace is 1.70, with Rust 2021 edition. Rust 1.70 CI passed on the tested host runners; hardware, OS ABI and field deployment claims remain unverified. Rust Boy's independently maintained workspace currently uses Rust 1.90.
 
-## Research, security and integration documentation
+## Machine indexing and documentation
 
-- [Rust IRC projects and implementation matrix](docs/research/IRC_LITERATURE_MATRIX.md)
-- [Security and legacy system literature matrix](docs/research/SECURITY_LEGACY_DEPLOYMENT_MATRIX.md)
-- [Legacy target and hardware compatibility profile](docs/deployment/LEGACY_COMPATIBILITY.md)
-- [Offline redeployment and rollback runbook](docs/deployment/OFFLINE_REDEPLOYMENT_RUNBOOK.md)
-- [G2g-A Ed25519 signed-bundle verification laboratory](docs/deployment/G2G_SIGNED_BUNDLE_LAB.md)
-- [Threat model](docs/security/THREAT_MODEL.md)
-- [Release acceptance checklist](docs/security/RELEASE_CHECKLIST.md)
-- [Rust Boy adapter contract](docs/integration/RUST_BOY_ADAPTER_CONTRACT.md)
-- [G2 secure TLS transport and legacy-target decision](docs/architecture/G2_SECURE_TRANSPORT_DECISION.md)
-- [G2 TLS source and test evidence](docs/security/G2_TLS_IMPLEMENTATION_EVIDENCE.md)
-- [G2b IRC registration and recovery implementation](docs/architecture/G2B_REGISTRATION_RECOVERY.md)
-- [G2c independent Ergo IRCd and credential-reference design](docs/architecture/G2C_INDEPENDENT_IRCD_CREDENTIALS.md)
-- [G2d SASL PLAIN and native credential-store matrix](docs/architecture/G2D_SASL_NATIVE_CREDENTIALS.md)
-- [G2e independent SASL account and headless legacy key matrix](docs/architecture/G2E_INDEPENDENT_SASL_LEGACY_KEYS.md)
-- [G2f bounded registration and legacy hardware acceptance](docs/architecture/G2F_REGISTRATION_HARDWARE_GATES.md)
-- [Architecture and phased development roadmap](docs/architecture/RUST_BOY_INTEGRATION_ROADMAP.md)
-- [G1b protocol implementation and pending evidence](docs/security/G1B_PROTOCOL_EVIDENCE.md)
-- [Nightly-only isolated fuzz harness](fuzz/README.md)
-- [Security disclosure and deployment limitations](SECURITY.md)
-- [Contribution rules](CONTRIBUTING.md)
+Start with [AGENTS.md](AGENTS.md) for agent-safe development guidance and [docs/INDEX.md](docs/INDEX.md) for the generated human-readable repository map. [index/MACHINE_INDEX.json](index/MACHINE_INDEX.json) is the compact, versioned machine inventory: stable file paths, module ownership, release maturity, trust boundaries, and task-to-source routes. [index/catalog.json](index/catalog.json) is the authoritative curated routing source.
+
+Indexing is **offline and metadata-only** (no embeddings, external crawler, secrets, or duplicated source bodies). Every PR runs a drift check. Adding a module or moving an entrypoint requires a catalog update.
+
+```sh
+python3 scripts/repo_index.py --query 'SASL authentication'
+python3 scripts/repo_index.py --write
+python3 scripts/repo_index.py --check
+```
+
+For deeper evidence, follow [IRC literature](docs/research/IRC_LITERATURE_MATRIX.md), [security release gates](docs/security/RELEASE_CHECKLIST.md), [Rust Boy import contract](docs/integration/RUST_BOY_ADAPTER_CONTRACT.md), and [offline deployment runbook](docs/deployment/OFFLINE_REDEPLOYMENT_RUNBOOK.md). The full architecture, test evidence, and research navigation lives in [docs/INDEX.md](docs/INDEX.md).
 
 ## Security and deployment posture
 

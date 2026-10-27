@@ -22,3 +22,8 @@ release-bundles/
 /fuzz/target/
 /fuzz/artifacts/
 /fuzz/coverage/
+
+# Python index/test bytecode and local virtual environments
+__pycache__/
+*.py[cod]
+.venv/

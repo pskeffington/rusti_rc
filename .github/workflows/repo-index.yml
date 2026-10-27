@@ -1,0 +1,47 @@
+name: Repository machine index and navigation integrity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  machine-index:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout tracked source without persisting credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify offline Python and Git
+        shell: bash
+        run: |
+          python3 --version
+          git --version
+      - name: Run deterministic repository-index regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s scripts/tests -p 'test_repo_index.py' -v
+      - name: Refuse stale or invalid machine and Markdown indexes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/repo_index.py --check
+      - name: Verify representative machine lookups
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/repo_index.py --query 'SASL authentication' \
+            | python3 -c 'import json,sys; x=json.load(sys.stdin); assert any(r["route"]=="sasl-account" for r in x["matches"])'
+          python3 scripts/repo_index.py --query 'offline rollback signature' \
+            | python3 -c 'import json,sys; x=json.load(sys.stdin); assert any(r["route"]=="offline-release" for r in x["matches"])'
+
+  # No dependency install, indexing service, API credentials, embedded vectors,
+  # remote crawler, generated public archive, or production IPC is involved.
+  # Machine metadata is not a release/security approval.
