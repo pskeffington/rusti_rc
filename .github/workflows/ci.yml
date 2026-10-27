@@ -3,11 +3,27 @@ name: Portable Rust scaffold
 on:
   push:
     branches: [main]
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - crates/**
+      - examples/**
+      - .github/workflows/ci.yml
   pull_request:
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - crates/**
+      - examples/**
+      - .github/workflows/ci.yml
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: rusti-rc-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   offline-tests:
@@ -33,5 +49,5 @@ jobs:
         shell: bash
         run: cargo +${{ matrix.toolchain }} run -p rusti-standalone-cli
 
-  # Deliberately no publish, deploy, release, key material, or network listener job.
-  # Add signed artifact / target hardware gates only after security review.
+  # The release checklist requires a Cargo-generated lockfile and --locked
+  # builds before deployment. No release, deployment or signing jobs yet.
