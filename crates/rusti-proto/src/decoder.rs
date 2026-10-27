@@ -87,7 +87,9 @@ mod tests {
     fn accepts_fragmented_crlf_and_multiple_frames() {
         let mut d = FrameDecoder::new();
         let mut seen = Vec::new();
-        d.push(b"PING :alp", |item| seen.push(item.map(|frame| frame.command.to_owned())));
+        d.push(b"PING :alp", |item| {
+            seen.push(item.map(|frame| frame.command.to_owned()))
+        });
         assert!(seen.is_empty());
         d.push(b"ha\r\nPING :beta\r\n", |item| {
             seen.push(item.map(|frame| frame.params()[0].to_owned()))
@@ -156,7 +158,10 @@ mod tests {
     #[test]
     fn valid_size_boundary_stays_bounded() {
         let mut d = FrameDecoder::new();
-        let frame = format!("PING :{}\r\n", "x".repeat(MAX_BASE_BYTES - "PING :\r\n".len()));
+        let frame = format!(
+            "PING :{}\r\n",
+            "x".repeat(MAX_BASE_BYTES - "PING :\r\n".len())
+        );
         let mut ok = false;
         d.push(frame.as_bytes(), |item| ok = item.is_ok());
         assert!(ok);

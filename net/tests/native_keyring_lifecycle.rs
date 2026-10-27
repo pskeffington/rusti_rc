@@ -4,13 +4,14 @@
 //! It mutates an isolated test keychain entry scoped to this process.
 //! No deployed operator credential or real IRC account is read.
 #![forbid(unsafe_code)]
-#![cfg(all(feature = "os-keyring", any(target_os = "macos", target_os = "windows")))]
+#![cfg(all(
+    feature = "os-keyring",
+    any(target_os = "macos", target_os = "windows")
+))]
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use rusti_client::credential_ref::{
-    CredentialPurpose, CredentialRef, ProtectedCredentialStore,
-};
+use rusti_client::credential_ref::{CredentialPurpose, CredentialRef, ProtectedCredentialStore};
 use rusti_transport_tls::native_store::NativeOsCredentialStore;
 
 struct Cleanup {
@@ -38,20 +39,17 @@ fn isolated_native_store_provision_rotate_revoke() {
         .expect("valid system time")
         .as_nanos();
     let item = format!("g2e_manual_{}_{}", std::process::id(), timestamp);
-    let reference = CredentialRef::new(
-        &item,
-        "localhost",
-        6697,
-        CredentialPurpose::SaslPassword,
-    )
-    .expect("unique isolated keychain record ID");
+    let reference = CredentialRef::new(&item, "localhost", 6697, CredentialPurpose::SaslPassword)
+        .expect("unique isolated keychain record ID");
     let store = NativeOsCredentialStore::new();
     let _cleanup = Cleanup {
         reference: reference.clone(),
     };
 
     assert!(
-        store.provision(&reference, b"synthetic_first_value", false).is_err(),
+        store
+            .provision(&reference, b"synthetic_first_value", false)
+            .is_err(),
         "write requires explicit local approval"
     );
     store

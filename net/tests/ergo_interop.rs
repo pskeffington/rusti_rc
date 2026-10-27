@@ -24,8 +24,8 @@ fn test_connection(nickname: &str) -> TlsIrcSession {
         .expect("RUSTI_ERGO_ADDR is required in the isolated CI job")
         .parse()
         .expect("valid endpoint");
-    let cert_path = env::var("RUSTI_ERGO_CA_DER")
-        .expect("RUSTI_ERGO_CA_DER must point to a throwaway test CA");
+    let cert_path =
+        env::var("RUSTI_ERGO_CA_DER").expect("RUSTI_ERGO_CA_DER must point to a throwaway test CA");
     let cert = fs::read(cert_path).expect("read explicit test-only CA DER");
     let mut roots = RootCertStore::empty();
     roots
@@ -102,7 +102,10 @@ fn registered_clients_join_and_exchange_plain_channel_text() {
         alice.join(CHANNEL).unwrap(),
         Submission::SubmittedUnconfirmed
     );
-    assert!(joined_channel(&mut alice), "Alice never received end-of-NAMES");
+    assert!(
+        joined_channel(&mut alice),
+        "Alice never received end-of-NAMES"
+    );
     assert_eq!(bob.join(CHANNEL).unwrap(), Submission::SubmittedUnconfirmed);
     assert!(joined_channel(&mut bob), "Bob never received end-of-NAMES");
 

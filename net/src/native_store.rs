@@ -8,9 +8,7 @@
 //! Secrets are never passed via argv or environment variables.
 #![forbid(unsafe_code)]
 
-use rusti_client::credential_ref::{
-    CredentialPurpose, CredentialRef, ProtectedCredentialStore,
-};
+use rusti_client::credential_ref::{CredentialPurpose, CredentialRef, ProtectedCredentialStore};
 use zeroize::Zeroizing;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -80,11 +78,7 @@ impl Default for NativeOsCredentialStore {
 impl ProtectedCredentialStore for NativeOsCredentialStore {
     type Error = NativeStoreError;
 
-    fn with_secret<R, F>(
-        &self,
-        reference: &CredentialRef,
-        use_secret: F,
-    ) -> Result<R, Self::Error>
+    fn with_secret<R, F>(&self, reference: &CredentialRef, use_secret: F) -> Result<R, Self::Error>
     where
         F: FnOnce(&[u8]) -> R,
     {
@@ -154,7 +148,8 @@ mod tests {
             "irc.example.org",
             6697,
             CredentialPurpose::SaslPassword,
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     #[test]

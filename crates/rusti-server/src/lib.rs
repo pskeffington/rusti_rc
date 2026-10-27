@@ -47,8 +47,10 @@ impl ServerConfig {
         if !self.tls_required {
             return Err(ServerError::InsecureTransportForbidden);
         }
-        if self.max_clients == 0 || self.max_clients > 64
-            || self.max_channels == 0 || self.max_channels > 32
+        if self.max_clients == 0
+            || self.max_clients > 64
+            || self.max_channels == 0
+            || self.max_channels > 32
         {
             return Err(ServerError::InvalidLimits);
         }
@@ -67,7 +69,10 @@ mod tests {
 
     #[test]
     fn server_is_disabled_on_import() {
-        assert_eq!(ServerConfig::default().request_start(), Err(ServerError::Disabled));
+        assert_eq!(
+            ServerConfig::default().request_start(),
+            Err(ServerError::Disabled)
+        );
     }
 
     #[test]
@@ -87,7 +92,10 @@ mod tests {
             tls_required: false,
             ..ServerConfig::default()
         };
-        assert_eq!(cfg.request_start(), Err(ServerError::InsecureTransportForbidden));
+        assert_eq!(
+            cfg.request_start(),
+            Err(ServerError::InsecureTransportForbidden)
+        );
     }
 
     #[test]
@@ -96,6 +104,9 @@ mod tests {
             enabled: true,
             ..ServerConfig::default()
         };
-        assert_eq!(cfg.request_start(), Err(ServerError::ListenerNotImplemented));
+        assert_eq!(
+            cfg.request_start(),
+            Err(ServerError::ListenerNotImplemented)
+        );
     }
 }

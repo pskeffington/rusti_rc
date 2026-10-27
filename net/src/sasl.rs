@@ -8,9 +8,7 @@
 use std::io::Write;
 use std::time::{Duration, Instant};
 
-use rusti_client::credential_ref::{
-    CredentialPurpose, CredentialRef, ProtectedCredentialStore,
-};
+use rusti_client::credential_ref::{CredentialPurpose, CredentialRef, ProtectedCredentialStore};
 use rusti_client::ClientConfig;
 use rusti_proto::sasl::{SaslAction, SaslPlainFlow, SaslStage};
 use zeroize::Zeroizing;
@@ -21,8 +19,7 @@ use crate::{Receive, TlsIrcSession, TransportError};
 const MAX_AUTH_TIMEOUT: Duration = Duration::from_secs(30);
 const MAX_PASSWORD_BYTES: usize = 192;
 const MAX_ACTIONS_PER_READ: usize = 8;
-const ALPHABET: &[u8; 64] =
-    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /// Construct sensitive base64 into a zeroizing buffer. The encoded response
 /// contains credential-equivalent material and must not be logged/retained.
@@ -50,7 +47,9 @@ fn encode_base64(bytes: &[u8]) -> Zeroizing<Vec<u8>> {
 
 fn valid_account(s: &str) -> bool {
     let mut bytes = s.bytes();
-    let Some(first) = bytes.next() else { return false };
+    let Some(first) = bytes.next() else {
+        return false;
+    };
     s.len() <= 64
         && first.is_ascii_alphanumeric()
         && bytes.all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'-'))
@@ -114,7 +113,12 @@ impl TlsIrcSession {
         timeout: Duration,
     ) -> Result<(), TransportError> {
         self.register_sasl_plain_cancellable(
-            nickname, username, account, credential, store, timeout,
+            nickname,
+            username,
+            account,
+            credential,
+            store,
+            timeout,
             &RegistrationCancellation::new(),
         )
     }
@@ -164,7 +168,9 @@ impl TlsIrcSession {
             server_port: self.authenticated_port,
             tls_required: true,
         };
-        credential.authorize_for(&config).map_err(|_| TransportError::CredentialPolicy)?;
+        credential
+            .authorize_for(&config)
+            .map_err(|_| TransportError::CredentialPolicy)?;
 
         let mut flow = SaslPlainFlow::new(nickname, username)?;
         let init = flow.begin()?;
@@ -209,9 +215,9 @@ impl TlsIrcSession {
                                     _ => "OTHER",
                                 };
                                 error = Some(TransportError::SaslPhase(phase, err, event));
-                            },
+                            }
                         }
-                    },
+                    }
                 }
             });
             if let Some(err) = error {

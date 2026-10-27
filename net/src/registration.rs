@@ -34,7 +34,11 @@ impl TlsIrcSession {
         timeout: Duration,
     ) -> Result<(), TransportError> {
         self.register_with_capabilities_cancellable(
-            nickname, username, required, optional, timeout,
+            nickname,
+            username,
+            required,
+            optional,
+            timeout,
             &RegistrationCancellation::new(),
         )
     }

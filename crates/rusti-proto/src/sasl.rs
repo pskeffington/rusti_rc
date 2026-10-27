@@ -67,7 +67,9 @@ pub struct SaslPlainFlow {
 
 fn valid_atom(s: &str) -> bool {
     let mut bytes = s.bytes();
-    let Some(first) = bytes.next() else { return false };
+    let Some(first) = bytes.next() else {
+        return false;
+    };
     s.len() <= 24
         && first.is_ascii_alphabetic()
         && bytes.all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
@@ -168,7 +170,8 @@ impl SaslPlainFlow {
 
         if frame.command.eq_ignore_ascii_case("PING") {
             let params = frame.params();
-            if params.len() != 1 || params[0].is_empty()
+            if params.len() != 1
+                || params[0].is_empty()
                 || params[0].len() > 256
                 || !params[0].bytes().all(|b| (0x20..=0x7e).contains(&b))
             {
@@ -178,10 +181,26 @@ impl SaslPlainFlow {
         }
 
         if frame.command.eq_ignore_ascii_case("ERROR")
-            || matches!(frame.command,
-                "410" | "421" | "431" | "432" | "433" | "436"
-                | "451" | "462" | "463" | "464" | "465" | "466"
-                | "902" | "904" | "905" | "906" | "907" | "908"
+            || matches!(
+                frame.command,
+                "410"
+                    | "421"
+                    | "431"
+                    | "432"
+                    | "433"
+                    | "436"
+                    | "451"
+                    | "462"
+                    | "463"
+                    | "464"
+                    | "465"
+                    | "466"
+                    | "902"
+                    | "904"
+                    | "905"
+                    | "906"
+                    | "907"
+                    | "908"
             )
         {
             return self.fail(SaslError::ServerRejected);
@@ -242,9 +261,7 @@ impl SaslPlainFlow {
         }
 
         if frame.command.eq_ignore_ascii_case("AUTHENTICATE") {
-            if self.stage != SaslStage::AwaitingChallenge
-                || frame.params() != ["+"]
-            {
+            if self.stage != SaslStage::AwaitingChallenge || frame.params() != ["+"] {
                 return self.fail(SaslError::MalformedChallenge);
             }
             self.stage = SaslStage::AwaitingPayloadWrite;
@@ -264,9 +281,7 @@ impl SaslPlainFlow {
             // Acceptance is still gated on the authenticated TLS session,
             // negotiated SASL, challenge response write and numeric 903.
             // The final 001 welcome must target the exact chosen nickname.
-            if self.stage != SaslStage::AwaitingResult
-                || !self.target_matches(frame, true)
-            {
+            if self.stage != SaslStage::AwaitingResult || !self.target_matches(frame, true) {
                 return self.fail(SaslError::UnexpectedFrame);
             }
             self.authenticated = true;
@@ -308,7 +323,10 @@ mod tests {
         let init = s.begin().unwrap();
         assert_eq!(init[0], "CAP LS 302\r\n");
         assert_eq!(init[1], "NICK tester\r\n");
-        assert_eq!(feed(&mut s, "CAP * LS * :multi-prefix\r\n"), Ok(SaslAction::None));
+        assert_eq!(
+            feed(&mut s, "CAP * LS * :multi-prefix\r\n"),
+            Ok(SaslAction::None)
+        );
         assert_eq!(
             feed(&mut s, "CAP * LS :message-tags sasl=EXTERNAL,PLAIN\r\n"),
             Ok(SaslAction::Send(CAP_REQ_SASL))
@@ -324,13 +342,19 @@ mod tests {
             Ok(SaslAction::SupplySecret)
         );
         s.payload_written().unwrap();
-        assert_eq!(feed(&mut s, ":irc 900 tester :Logged in\r\n"), Ok(SaslAction::None));
+        assert_eq!(
+            feed(&mut s, ":irc 900 tester :Logged in\r\n"),
+            Ok(SaslAction::None)
+        );
         assert_eq!(
             feed(&mut s, ":irc 903 tester :SASL complete\r\n"),
             Ok(SaslAction::Send(CAP_END))
         );
         s.cap_end_written().unwrap();
-        assert_eq!(feed(&mut s, ":irc 001 tester :Welcome\r\n"), Ok(SaslAction::None));
+        assert_eq!(
+            feed(&mut s, ":irc 001 tester :Welcome\r\n"),
+            Ok(SaslAction::None)
+        );
         assert!(s.registered());
     }
 
