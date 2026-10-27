@@ -214,6 +214,21 @@ fn failed_sasl_never_registers_anonymously() {
     assert!(matches!(
         tls.send_privmsg("#lab", "not sent"), Err(TransportError::NotRegistered)
     ));
+    // A rejected SASL attempt cannot switch the same TLS connection to
+    // anonymous IRC or try another password.
+    assert!(matches!(
+        tls.register_with_capabilities(
+            "tester", "tester", &[], &[], Duration::from_secs(1),
+        ),
+        Err(TransportError::RegistrationAlreadyAttempted),
+    ));
+    assert!(matches!(
+        tls.register_sasl_plain(
+            "tester", "tester", "tester", &reference(addr.port()),
+            &SyntheticStore, Duration::from_secs(1),
+        ),
+        Err(TransportError::RegistrationAlreadyAttempted),
+    ));
     assert!(server.join().unwrap());
 }
 
