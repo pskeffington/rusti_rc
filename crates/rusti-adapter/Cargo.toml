@@ -4,6 +4,7 @@ description = "Read-only, untrusted IRC display adapter for future Rust Boy impo
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 publish = false
 
 [dependencies]
