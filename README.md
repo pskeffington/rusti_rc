@@ -2,7 +2,7 @@
 
 **Rust-native IRC protocol research and security-gated communications adapter for [Rust Boy](https://github.com/pskeffington/pip_boy).**
 
-**Current state (2026-10-26): a portable offline-first protocol core plus an isolated, explicitly activated TLS transport preview.** The portable root workspace opens no sockets; the separately built net/ crate can make one caller-requested, certificate-verified IRC TCP/TLS connection. No SASL, automatic discovery, persisted messages, LAN server, signed installer or Rust Boy integration exists. This is not a deployable field communications system.
+**Current state (2026-10-26): a portable offline-first protocol core plus an isolated, explicitly activated TLS transport preview.** The portable root workspace opens no sockets; the separately built net/ crate can make one caller-requested, certificate-verified IRC TCP/TLS connection. No SASL or protected credential-store implementation, automatic discovery, persisted messages, LAN server, signed installer or Rust Boy integration exists. This is not a deployable field communications system.
 
 ## Purpose
 
@@ -12,16 +12,16 @@ Build a modular IRC stack, independently distributable for portable Linux and ol
 
 | Path | Actual scaffold state |
 |---|---|
-| [rusti-proto](crates/rusti-proto/src/lib.rs) | Dependency-free bounded IRC parser, tag decoding, CAP 302 planner, incremental byte framing and offline tests; not a complete RFC/IRCv3 implementation |
-| [rusti-client](crates/rusti-client/src/lib.rs) | Disabled-by-default, Rust 1.70-compatible connection policy; core alone still returns not implemented |
+| [rusti-proto](crates/rusti-proto/src/lib.rs) | Dependency-free bounded IRC parser, tag decoding, CAP 302/registration, incremental framing and control-stripped display helpers; not complete RFC/IRCv3 |
+| [rusti-client](crates/rusti-client/src/lib.rs) | Disabled-by-default, Rust 1.70-compatible connection policy, bounded retry policy and redacted credential references (no key-store backend) |
 | [rusti-server](crates/rusti-server/src/lib.rs) | Disabled-by-default, loopback/TLS/limits policy; no actual listener |
-| [rusti-adapter](crates/rusti-adapter/src/lib.rs) | Untrusted read-only IRC chat framing for future Rust Boy import; no Vault/peer privileges |
+| [rusti-adapter](crates/rusti-adapter/src/lib.rs) | Untrusted read-only IRC framing, sanitized display methods and redacted debug output; no Vault/peer privileges |
 | [rusti-testkit](crates/rusti-testkit/src/lib.rs) | Synthetic offline wire fixtures |
 | [standalone-cli](examples/standalone-cli/src/main.rs) | Offline smoke test only, prints fixture result |
 | [TLS networking preview](net/README.md) | Separate modern rustls/ring workspace: explicit verified TLS connection, basic IRC commands and localhost certificate tests; no Rust Boy import |
-| [Portable CI](.github/workflows/ci.yml) | [G2b run #33 passed 10/10](https://github.com/pskeffington/rusti_rc/actions/runs/40443606057): Rust 1.70/stable Linux/macOS/Windows and ARMv6/ARMv7/ARM64/musl compile-only checks |
-| [Independent IRCd CI](.github/workflows/ergo-interop.yml) | Opt-in, localhost-only Ergo v2.19.1 server and ephemeral TLS CA; two-client channel interoperability. Not a field acceptance | 
-| [TLS CI](.github/workflows/verified-tls.yml) | [G2b run #18 passed 3/3](https://github.com/pskeffington/rusti_rc/actions/runs/40443606042): locked-dependency verified-TLS loopback tests and Clippy on Linux/macOS/Windows |
+| [Portable CI](.github/workflows/ci.yml) | [G2c run #36 passed 10/10](https://github.com/pskeffington/rusti_rc/actions/runs/40444811629): Rust 1.70/stable Linux/macOS/Windows and ARMv6/ARMv7/ARM64/musl compile-only checks |
+| [Independent IRCd CI](.github/workflows/ergo-interop.yml) | [G2c run #4 passed 1/1](https://github.com/pskeffington/rusti_rc/actions/runs/40444811673): digest-pinned localhost Ergo v2.19.1, ephemeral CA and two-client channel delivery. Not hardware acceptance | 
+| [TLS CI](.github/workflows/verified-tls.yml) | [G2c run #23 passed 3/3](https://github.com/pskeffington/rusti_rc/actions/runs/40444811587): locked-dependency verified-TLS loopback tests and Clippy on Linux/macOS/Windows |
 
 ## Local scaffold test
 
@@ -54,6 +54,7 @@ These root-workspace commands do **not** connect to IRC. No third-party crates a
 ## Security and deployment posture
 
 - No IRC nickname, tag, channel mode or server can authorize Rust Boy organizational actions.
+- Independent Ergo interoperability has passed on an isolated CI runner, but credential references **do not yet retrieve secrets** and SASL is not implemented.
 - Do not weaken TLS/certificate validation, authentication, code-signing or rollback protections for legacy OSes.
 - Build cross-target, inspect glibc/musl, crypto provider and CPU constraints; then test on real hardware. Cross compilation alone is not validation.
 - Treat package digest and **publisher signature** as separate checks. This repo has no signer or release verifier yet.
