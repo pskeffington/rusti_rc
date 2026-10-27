@@ -11,7 +11,7 @@ Status: proposed acceptance criteria. **There are no releases or verified hardwa
 | Supply chain | RustSec/cargo-deny and CI action pin reviews; findings triaged | NOT DONE |
 | Parser security | Fuzz, memory limits, tag/CTCP/Unicode/control tests | Bounded decoder, tags, CAP and deterministic tests passed in CI; fuzz harness not executed; protocol audit NOT DONE |
 | TLS identity | Modern rustls provider selected; TLS 1.2/1.3, SAN validation, expired/revoked CA, no downgrade | NOT DONE |
-| Auth/secrets | SASL policy, OS-backed credentials, redacted logs, compartmentalized trust roots | NOT DONE |
+| Auth/secrets | SASL policy, OS-backed credentials, redacted logs, compartmentalized trust roots | No SASL/password path in G2b; secure credential provisioning NOT DONE |
 | Authorization | IRC nick never yields authenticated Rust Boy/Vault/organizational access | Source boundary authored, integration NOT DONE |
 | Server safety | Default disabled, loopback-only unless approved, flood control and no public bind | Policy stub only |
 | Target builds | x86 Linux, ARMv6/v7/ARM64, Intel/ARM Mac, Windows supported OS targets compiled | ARMv6/v7/ARM64 + musl source-only checks passed; actual target linking/runtime NOT DONE |

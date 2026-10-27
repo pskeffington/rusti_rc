@@ -60,7 +60,7 @@ fn cfg(endpoint: SocketAddr, server_host: &str) -> ClientConfig {
 }
 
 #[test]
-fn authenticated_local_tls_supports_bounded_message_exchange() {
+fn authenticated_local_tls_supports_bounded_ping_reply_without_registration() {
     let (addr, roots, server) = launch_lab_server(b"PING :synthetic\r\n");
     let mut client =
         TlsIrcSession::connect_tls(&cfg(addr, "localhost"), addr, roots, Timeouts::default())
@@ -80,11 +80,11 @@ fn authenticated_local_tls_supports_bounded_message_exchange() {
     }
     assert_eq!(received, vec![Ok(("PING".into(), "synthetic".into()))]);
     assert!(matches!(
-        client.send_privmsg("#lab", "hello from rusti_rc"),
+        client.pong("synthetic"),
         Ok(Submission::SubmittedUnconfirmed)
     ));
     let sent = server.join().expect("server completes").expect("server saw line");
-    assert!(sent.contains("PRIVMSG #lab :hello from rusti_rc\r\n"));
+    assert!(sent.contains("PONG :synthetic\r\n"));
 }
 
 #[test]
@@ -146,9 +146,14 @@ fn injection_does_not_enter_tls_output() {
         client.join("#invalid name"),
         Err(TransportError::InvalidIdentifier)
     ));
-    client.send_privmsg("#lab", "safe").unwrap();
+    assert!(matches!(
+        client.send_privmsg("#lab", "safe"),
+        Err(TransportError::NotRegistered)
+    ));
+    // PONG is a safe pre-registration response; regular channel sends are not.
+    client.pong("safe").unwrap();
     let sent = server.join().unwrap().unwrap();
-    assert_eq!(sent, "PRIVMSG #lab :safe\r\n");
+    assert_eq!(sent, "PONG :safe\r\n");
 }
 
 #[test]

@@ -21,7 +21,7 @@ The implementation is deliberately small: no Tokio, rustls or production protoco
 | G0 | Source/project matrix, threat model, license and compatibility review | Literature/security matrices and threat model drafted; license not chosen |
 | G1a | Strict framing and baseline encoding | Portable `rusti-proto` parser/PRIVMSG preview + unit tests; PR CI succeeded on tested host runners, hardware not verified |
 | G1b | Complete protocol and fuzzing | Opaque tags, decoded tag escaping, bounded streaming reader, limited CAP 302 planner, deterministic tests and a fuzz harness **authored**; complete CAP, RFC numerics, fuzz execution and interoperability remain pending (10/10 configured CI jobs passed) |
-| G2 | Authenticated transport | TLS 1.2/1.3 and SAN validation, SASL where applicable, fail-closed reconnect and credential management; **pending** |
+| G2 | Authenticated transport | Rustls TLS and synthetic cert tests merged; G2b CAP registration and pure-data retry policy in review. SASL, credential storage, independent IRCd, hardware/security acceptance pending |
 | G3 | Operator chat | Join/part, direct/channel messages, bounded queues, retries with truthful unconfirmed state; **pending** |
 | G4 | Optional LAN server | Explicit operator enable, loopback first, quota/flood tests, trusted LAN provisioning; **pending** |
 | G5 | Rust Boy import | Feature-gated `rusti-adapter` into existing LINK UI, explicit send, no new permissions or storage leaks; **pending** |
