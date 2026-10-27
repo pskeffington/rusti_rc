@@ -1,0 +1,10 @@
+[package]
+name = "rusti-standalone-cli"
+description = "Offline parser smoke test; does not connect to IRC"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+rusti-testkit = { path = "../../crates/rusti-testkit" }
