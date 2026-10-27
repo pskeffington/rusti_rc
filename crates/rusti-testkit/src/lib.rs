@@ -1,4 +1,6 @@
-//! Offline fixtures only. No remote endpoints or network operations.
+//! Synthetic, deterministic IRC wire fixtures for portable offline tests.
+//!
+//! No network connections, live identities, credentials, or operational data.
 #![forbid(unsafe_code)]
 
 pub const PING_FRAME: &str = "PING :irc.test.invalid\r\n";
