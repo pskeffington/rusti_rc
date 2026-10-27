@@ -1,6 +1,6 @@
 # G2b: IRC registration, certificate validity and bounded recovery
 
-**Status:** implemented in the G2b review branch; CI and independent IRCd/hardware validation must be recorded before promotion.
+**Status:** G2b foundation merged to main in [PR #4](https://github.com/pskeffington/rusti_rc/pull/4) (merge commit `cfd0f38ede273a778dd31ba160a876930899c3d8`). [Portable CI #33](https://github.com/pskeffington/rusti_rc/actions/runs/40443606057) passed **10/10**, and [TLS CI #18](https://github.com/pskeffington/rusti_rc/actions/runs/40443606042) passed **3/3** on tested PR head `1c2786de9e623cc85a45b9d27fc8a30f79e2b41b`. Independent IRCd interoperability and real legacy hardware/security acceptance remain pending.
 
 ## Purpose and source alignment
 
@@ -46,7 +46,7 @@ Normative references: [IRCv3 Capability Negotiation](https://ircv3.net/specs/ext
 
 ## Unresolved acceptance gates
 
-- [ ] Capture 10/10 portable host/cross-target CI and 3/3 locked TLS CI **on the exact G2b revision**; do not infer test outcomes from previous runs.
+- [x] Capture 10/10 portable host/cross-target CI and 3/3 locked TLS CI on the exact G2b PR revision: [portable run](https://github.com/pskeffington/rusti_rc/actions/runs/40443606057), [TLS run](https://github.com/pskeffington/rusti_rc/actions/runs/40443606042). These confirm software tests, not external IRCd or hardware support.
 - [ ] Interoperate with at least one independently built IRC daemon (e.g., Ergo or InspIRCd) using synthetic accounts on a test LAN; compare CAP and numeric transcripts.
 - [ ] End-to-end cancellation, timeouts on trickled frames, reconnect budgets and shutdown tests; no optimistic resends.
 - [ ] Secure credential-reference API, OS key-store provisioning and rotation; SASL PLAIN only under verified TLS and explicit capability/credential consent.
