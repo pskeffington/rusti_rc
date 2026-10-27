@@ -1,8 +1,10 @@
 //! Explicit, verified-TLS IRC transport for the standalone modern workspace.
 //!
 //! Importing this crate performs no I/O. Only an explicit connect_tls call
-//! opens a socket. It has no plaintext fallback, SASL, privileged actions,
-//! background retries, server listener, or persistent chat history.
+//! opens a socket. It has no plaintext fallback, background retries,
+//! server listener, privileged actions, or persistent chat history.
+//! SASL PLAIN is opt-in, available only after certificate-verified TLS;
+//! a server account is never a Rust Boy organizational authorization.
 //! Successful writes are submitted/unconfirmed, not delivery receipts.
 #![forbid(unsafe_code)]
 
@@ -224,6 +226,25 @@ impl TlsIrcSession {
             io_timeout: timeouts.io,
             sasl_required: false,
         })
+    }
+
+    /// The sole transition into an IRC registration attempt. CAP and SASL
+    /// registration share this terminal error policy. The callback runs only
+    /// after the attempt is consumed, and a failed preflight closes the socket
+    /// instead of allowing a second registration or anonymous downgrade.
+    fn run_registration_once<F>(&mut self, attempt: F) -> Result<(), TransportError>
+    where
+        F: FnOnce(&mut Self) -> Result<(), TransportError>,
+    {
+        if self.registered || self.registration_attempted {
+            return Err(TransportError::RegistrationAlreadyAttempted);
+        }
+        self.registration_attempted = true;
+        let result = attempt(self).and_then(|()| self.restore_session_timeouts());
+        if result.is_err() {
+            self.abort_registration_connection();
+        }
+        result
     }
 
     /// Bound every blocking read by the operator's whole-registration
