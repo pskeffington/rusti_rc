@@ -1,12 +1,12 @@
 # G2 secure transport / legacy deployment selection gate
 
-Status: **design plus G2 TLS implementation preview in review**, 2026-10-26. The Rust 1.70 framing core has passed CI. A separate net/ workspace provides an operator-invoked rustls client, synthetic localhost TLS tests and explicit trust roots; live IRC server interoperability, SASL, credential vault, revocation and supported legacy hardware remain unverified.
+Status: **G2 TLS client preview merged and locally CI-validated; field security acceptance pending**, 2026-10-26. The Rust 1.70 framing core has passed CI. A separate net/ workspace provides an operator-invoked rustls client, synthetic localhost TLS tests and explicit trust roots; live IRC server interoperability, SASL, credential vault, revocation and supported legacy hardware remain unverified.
 
 ## Decision: separate protocol MSRV from network crypto MSRV
 
 The protocol/parser crates retain the Rust 2021 / 1.70 source compatibility target. **Do not pin cryptography to an out-of-support version simply to preserve that compiler minimum.**
 
-The separate net/ implementation uses a newer audited Rust compiler while producing target-specific binaries for an older operating system/CPU, provided the actual kernel/ABI, crypto provider and runtime minimum are independently verified. The nested net/ workspace is independent from the portable root workspace. Merely importing the parser never links TLS or opens sockets.
+The separate net/ implementation uses a newer supported Rust compiler while producing target-specific binaries for an older operating system/CPU, provided the actual kernel/ABI, crypto provider and runtime minimum are independently verified. The nested net/ workspace is independent from the portable root workspace. Merely importing the parser never links TLS or opens sockets.
 
 ## Literature / engineering matrix
 
@@ -44,7 +44,7 @@ Normative guidance: [RFC 9325](https://www.rfc-editor.org/rfc/rfc9325) (TLS >=1.
 - Current source: [net/src/lib.rs](../../net/src/lib.rs), [synthetic certificate tests](../../net/tests/verified_tls_loopback.rs), [net README](../../net/README.md), [G2 evidence](../security/G2_TLS_IMPLEMENTATION_EVIDENCE.md).
 - Only explicit connect_tls can create a socket; it uses a supplied SocketAddr instead of DNS, validates server_host through rustls and rejects TLS-required=false.
 - This is synchronous/bounded I/O meant for a worker thread, not a UI event thread. Cancellation, automatic reconnect, credential storage and full IRCv3 orchestration are pending.
-- Tests are in GitHub Actions; do not claim production/legacy acceptance until test results and hardware evidence are reviewed.
+- [Final TLS CI](https://github.com/pskeffington/rusti_rc/actions/runs/40442639269) passed 3/3 Linux/macOS/Windows tests plus lint using frozen net/Cargo.lock. [Portable CI](https://github.com/pskeffington/rusti_rc/actions/runs/40442639261) passed 10/10. This is not production or legacy hardware acceptance.
 
 ## Exit criteria
 
