@@ -19,9 +19,9 @@ Status: proposed acceptance criteria. **There are no releases or verified hardwa
 | Server safety | Default disabled, loopback-only unless approved, flood control and no public bind | Policy stub only |
 | Target builds | x86 Linux, ARMv6/v7/ARM64, Intel/ARM Mac, Windows supported OS targets compiled | ARMv6/v7/ARM64 + musl source-only checks passed; actual target linking/runtime NOT DONE |
 | Real hardware | CPU, RAM, storage, kernel/ABI, TLS/CA, network loss/restart and failure injection | NOT DONE |
-| Offline package | Trusted verifier, signed manifest, controlled version floor, revocation metadata, verified payload and target | NOT DONE |
+| Offline package | Trusted verifier, signed manifest, controlled version floor, revocation metadata, verified payload and target | G2g-A has a synthetic **Ed25519 signature + target + digest lab** with negative tests; independent protected floor, trust root, revocation, freshness and deployable installer **NOT DONE** |
 | A/B redeploy | Power-loss-safe activation, state migration, recovery after corrupted USB or aborted update | NOT DONE |
-| Rollback protection | Signed prior slot, security floor, protected release history, migration compatibility | NOT DONE |
+| Rollback protection | Signed prior slot, security floor, protected release history, migration compatibility | G2g-A rejects below a **caller-supplied lab floor only**; no tamper-resistant monotonic counter or A/B anti-rollback **NOT DONE** |
 | Rust Boy integration | Feature-flag import, 0 sockets on disabled import, explicit operator POST, one-screen accessible HUD | NOT DONE |
 
 ## Evidence record template
