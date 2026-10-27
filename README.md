@@ -20,6 +20,7 @@ Build a modular IRC stack, independently distributable for portable Linux and ol
 | [standalone-cli](examples/standalone-cli/src/main.rs) | Offline smoke test only, prints fixture result |
 | [TLS networking preview](net/README.md) | Separate rustls/ring workspace: explicit verified TLS, IRC CAP and optional SASL PLAIN; feature-gated macOS/Windows native keyring; no Rust Boy import |
 | [Offline signed-bundle lab CI](.github/workflows/offline-release-lab.yml) | [G2g-A run passed 14/14 tests](https://github.com/pskeffington/rusti_rc/actions/runs/40457172972): synthetic Ed25519 verify, tamper, wrong key/target and untrusted test-floor rejection; always deployment blocked |
+| [Rustfmt style CI](.github/workflows/repo-index.yml) | Pinned Rust 1.90.0 formatter checks portable, standalone TLS, and isolated fuzz Rust sources without rewriting them; no runtime feature is enabled |
 | [Portable CI](.github/workflows/ci.yml) | [G2f 10/10 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40456201437): Rust 1.70/stable Linux/macOS/Windows and ARMv6/ARMv7/ARM64/musl compile-only checks |
 | [Independent IRCd CI](.github/workflows/ergo-interop.yml) | [G2g-A 1/1 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40457172616): digest-pinned localhost Ergo v2.19.1, ephemeral CA, ordinary channel chat and 3 real-account synthetic SASL tests. Not hardware acceptance | 
 | [TLS CI](.github/workflows/verified-tls.yml) | [G2g-A 3/3 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40457172858): locked TLS/Clippy on Linux/macOS/Windows, including G2g-A cancellation during blocked credential retrieval and G2f interrupted registration |
@@ -32,6 +33,18 @@ cargo run -p rusti-standalone-cli
 ```
 
 These root-workspace commands do **not** connect to IRC. No third-party crates are required for the portable workspace; the separate nightly fuzz harness uses a dev-only `libfuzzer-sys` dependency and the independent net/ TLS workspace uses its own frozen dependency graph. The minimum Rust toolchain **candidate** for the portable workspace is 1.70, with Rust 2021 edition. Rust 1.70 CI passed on the tested host runners; hardware, OS ABI and field deployment claims remain unverified. Rust Boy's independently maintained workspace currently uses Rust 1.90.
+
+## Formatting and code maintenance
+
+The shared TLS registration guard is implemented once in `TlsIrcSession::run_registration_once`; anonymous CAP and opt-in SASL retain their separate state machines and never retry an aborted session. Source formatting is **check-only in CI** and uses pinned `rustfmt 1.90.0` for reproducibility. Run from the repository root:
+
+```sh
+cargo +1.90.0 fmt --all --manifest-path Cargo.toml -- --check
+cargo +1.90.0 fmt --all --manifest-path net/Cargo.toml -- --check
+cargo +1.90.0 fmt --all --manifest-path fuzz/Cargo.toml -- --check
+```
+
+This is a style gate, not an IRC security, older-hardware, or signed-release certification.
 
 ## Machine indexing and documentation
 
