@@ -30,10 +30,10 @@ Do not use the current transport for clinical records, safety-of-life messaging,
 
 ## Next gates
 
-- [G2e independent Ergo SASL test suite](tests/ergo_sasl.rs) and [throwaway registered-account bootstrap](tests/bootstrap_ergo_account.py) are isolated to a localhost-only CI job. A passing test proves a real third-party IRCd account flow, NOT protected OS credentials.
+- [G2e independent Ergo SASL test suite](tests/ergo_sasl.rs) and [throwaway registered-account bootstrap](tests/bootstrap_ergo_account.py) are isolated to a localhost-only CI job. [G2e independent CI passed](https://github.com/pskeffington/rusti_rc/actions/runs/40448428240) using synthetic fixture credentials. A passing test proves real third-party IRCd account flow, NOT protected OS credentials.
 - [Ignored manual native Keychain/Credential Manager lifecycle test](tests/native_keyring_lifecycle.rs) covers synthetic provisioning/rotation/revocation with explicit local permission and is never automatically executed in CI. See [G2e architecture](../docs/architecture/G2E_INDEPENDENT_SASL_LEGACY_KEYS.md).
 - Broader IRC registration and capability edge cases across a second independent IRCd. [Ergo interoperability](../.github/workflows/ergo-interop.yml) has already passed using a digest-pinned server image.
-- Test actual native macOS/Windows secret provisioning, retrieval, rotation and denial; separately validate SASL account login/failure against independent IRCd. G2d only exercises synthetic account credentials.
+- Test actual native macOS/Windows secret provisioning, retrieval, rotation and denial; separately validate SASL account login/failure against independent IRCd. G2e independently validated synthetic-account registration and SASL on Ergo, but real native OS keyring lifecycle remains open.
 - Security and license audit, vulnerabilities/SBOM, and hardening against slow peers and reconnect floods. Cargo.lock is already pinned.
 - [Ergo interoperability test](tests/ergo_interop.rs) passed in the [isolated, digest-pinned Docker CI job](https://github.com/pskeffington/rusti_rc/actions/runs/40444811673); read [G2c evidence](../docs/architecture/G2C_INDEPENDENT_IRCD_CREDENTIALS.md).
 - Feature-gated [macOS/Windows native credential adapter](src/native_store.rs) is implemented and compile/negative-tested, while the portable [CredentialRef](../crates/rusti-client/src/credential_ref.rs) itself remains a no-I/O identity handle. Linux headless protected storage and actual OS-backed secret lifecycle are pending.
