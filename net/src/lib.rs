@@ -8,6 +8,7 @@
 
 mod registration;
 mod sasl;
+mod sasl;
 
 use std::io::{self, Read, Write};
 use std::net::{SocketAddr, TcpStream};
