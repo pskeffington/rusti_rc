@@ -16,7 +16,7 @@ CATALOG = "index/catalog.json"
 MACHINE = "index/MACHINE_INDEX.json"
 DOCS = "docs/INDEX.md"
 SCHEMA = "rusti_rc.machine_index.v1"
-EXTENSIONS = {".rs", ".md", ".py", ".sh", ".toml", ".json", ".yaml", ".yml"}
+EXTENSIONS = {".rs", ".md", ".py", ".sh", ".toml", ".json", ".yaml", ".yml", ".lock"}
 ROOT_FILES = {"README.md", "SECURITY.md", "CONTRIBUTING.md", "AGENTS.md",
               "Cargo.toml", "LICENSE", ".gitignore"}
 BLOCKED_EXT = {".key", ".pem", ".p12", ".pfx", ".age", ".db", ".sqlite",
