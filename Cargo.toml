@@ -13,6 +13,8 @@ resolver = "2"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.70"
+license = "MIT"
+repository = "https://github.com/pskeffington/rusti_rc"
 
 [profile.release]
 overflow-checks = true
