@@ -8,15 +8,17 @@
 
 mod registration;
 mod sasl;
+pub mod cancel;
 #[cfg(feature = "os-keyring")]
 pub mod native_store;
 
 use std::io::{self, Read, Write};
-use std::net::{SocketAddr, TcpStream};
+use std::net::{Shutdown, SocketAddr, TcpStream};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use rusti_client::{ClientConfig, ClientError};
+use crate::cancel::RegistrationCancellation;
 use rusti_proto::decoder::FrameDecoder;
 use rusti_proto::{cap::CAP_LS_302, encode_privmsg, FrameError, ParsedMessage};
 use rusti_proto::registration::{RegistrationError, RegistrationFlow};
@@ -42,6 +44,7 @@ pub enum TransportError {
     Frame(FrameError),
     Registration(RegistrationError),
     RegistrationTimedOut,
+    RegistrationCancelled,
     RegistrationAlreadyAttempted,
     RegistrationResponseOverflow,
     NotRegistered,
@@ -180,6 +183,7 @@ pub struct TlsIrcSession {
     /// The original authenticated TLS name/port, never user-supplied again.
     authenticated_host: String,
     authenticated_port: u16,
+    io_timeout: Duration,
     /// Active SASL must never silently downgrade on logout or CAP DEL.
     sasl_required: bool,
 }
@@ -217,8 +221,54 @@ impl TlsIrcSession {
             registration: None,
             authenticated_host: client.server_host.clone(),
             authenticated_port: client.server_port,
+            io_timeout: timeouts.io,
             sasl_required: false,
         })
+    }
+
+    /// Bound every blocking read by the operator's whole-registration
+    /// deadline and a short cancellation poll. A slow peer cannot refresh
+    /// the deadline by sending isolated bytes. Both timeout forms returned
+    /// by Unix/Windows are already interpreted by read_once.
+    fn registration_step(
+        &mut self,
+        deadline: Instant,
+        cancel: &RegistrationCancellation,
+    ) -> Result<(), TransportError> {
+        if cancel.is_cancelled() {
+            return Err(TransportError::RegistrationCancelled);
+        }
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(TransportError::RegistrationTimedOut);
+        }
+        let minimum = Duration::from_millis(1);
+        let read = remaining
+            .min(self.io_timeout)
+            .min(Duration::from_millis(200))
+            .max(minimum);
+        let write = remaining.min(self.io_timeout).max(minimum);
+        self.stream.sock.set_read_timeout(Some(read))?;
+        self.stream.sock.set_write_timeout(Some(write))?;
+        Ok(())
+    }
+
+    /// Restore the configured I/O limit after registration, instead of
+    /// retaining a 200ms registration poll timeout for normal IRC reads.
+    fn restore_session_timeouts(&mut self) -> Result<(), TransportError> {
+        self.stream.sock.set_read_timeout(Some(self.io_timeout))?;
+        self.stream.sock.set_write_timeout(Some(self.io_timeout))?;
+        Ok(())
+    }
+
+    /// Any aborted registration ends the whole connection. A caller cannot
+    /// retry in place or fall back to anonymous IRC on the same TLS session.
+    fn abort_registration_connection(&mut self) {
+        self.registered = false;
+        self.sasl_required = false;
+        self.registration_attempted = true;
+        self.registration = None;
+        let _ = self.stream.sock.shutdown(Shutdown::Both);
     }
 
     fn write_frame(&mut self, frame: &str) -> Result<Submission, TransportError> {
