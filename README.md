@@ -2,7 +2,7 @@
 
 **Rust-native IRC protocol research and security-gated communications adapter for [Rust Boy](https://github.com/pskeffington/pip_boy).**
 
-**Current state (2026-10-26): Rust 1.70 portable IRC core plus an isolated opt-in verified-TLS client, IRCv3 SASL PLAIN and optional desktop OS credential adapter.** Importing the portable root crates starts no sockets. The modern net/ crate requires a caller-requested TLS connection and explicit IRC/SASL registration. macOS Keychain and Windows Credential Manager support is feature-gated; Linux headless credential storage is not implemented. There is no automatic discovery, persistent chat, LAN server, signed installer or Rust Boy import. **Not a deployable field communications system.**
+**Current state (2026-10-27): Rust 1.70 portable IRC core plus an isolated opt-in verified-TLS client, IRCv3 SASL PLAIN and optional desktop OS credential adapter.** Importing the portable root crates starts no sockets. The modern net/ crate requires a caller-requested TLS connection and explicit IRC/SASL registration. macOS Keychain and Windows Credential Manager support is feature-gated; Linux headless credential storage is not implemented. There is no automatic discovery, persistent chat, LAN server, signed installer or Rust Boy import. **Not a deployable field communications system.**
 
 ## Purpose
 
@@ -19,9 +19,9 @@ Build a modular IRC stack, independently distributable for portable Linux and ol
 | [rusti-testkit](crates/rusti-testkit/src/lib.rs) | Synthetic offline wire fixtures |
 | [standalone-cli](examples/standalone-cli/src/main.rs) | Offline smoke test only, prints fixture result |
 | [TLS networking preview](net/README.md) | Separate rustls/ring workspace: explicit verified TLS, IRC CAP and optional SASL PLAIN; feature-gated macOS/Windows native keyring; no Rust Boy import |
-| [Portable CI](.github/workflows/ci.yml) | [G2d 10/10 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40445991514): Rust 1.70/stable Linux/macOS/Windows and ARMv6/ARMv7/ARM64/musl compile-only checks |
-| [Independent IRCd CI](.github/workflows/ergo-interop.yml) | [G2d 1/1 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40445991593): digest-pinned localhost Ergo v2.19.1, ephemeral CA and two-client channel delivery. Not hardware acceptance | 
-| [TLS CI](.github/workflows/verified-tls.yml) | [G2d 3/3 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40445991564): locked-dependency verified-TLS loopback tests and Clippy on Linux/macOS/Windows |
+| [Portable CI](.github/workflows/ci.yml) | [G2e 10/10 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40448428217): Rust 1.70/stable Linux/macOS/Windows and ARMv6/ARMv7/ARM64/musl compile-only checks |
+| [Independent IRCd CI](.github/workflows/ergo-interop.yml) | [G2e 1/1 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40448428240): digest-pinned localhost Ergo v2.19.1, ephemeral CA, ordinary channel chat and 3 real-account synthetic SASL tests. Not hardware acceptance | 
+| [TLS CI](.github/workflows/verified-tls.yml) | [G2e 3/3 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40448428222): locked-dependency verified-TLS loopback tests and Clippy on Linux/macOS/Windows |
 
 ## Local scaffold test
 
@@ -56,7 +56,7 @@ These root-workspace commands do **not** connect to IRC. No third-party crates a
 ## Security and deployment posture
 
 - No IRC nickname, tag, channel mode or server can authorize Rust Boy organizational actions.
-- Independent Ergo ordinary IRC interoperability passes in isolated CI. Synthetic TLS SASL PLAIN tests now pass; optional desktop OS keyring access is compiled and negative-tested, but actual Keychain/Credential Manager provisioning and independent IRCd SASL account authentication remain unverified.
+- Independent Ergo **ordinary IRC and disposable real-account SASL PLAIN** interoperability passed in isolated CI, including bad-password/no-downgrade and wrong-server checks. Desktop OS keyring support is compiled and negative-tested, but **actual Keychain/Credential Manager lifecycle and physical legacy runtime remain unverified**.
 - Do not weaken TLS/certificate validation, authentication, code-signing or rollback protections for legacy OSes.
 - Build cross-target, inspect glibc/musl, crypto provider and CPU constraints; then test on real hardware. Cross compilation alone is not validation.
 - Treat package digest and **publisher signature** as separate checks. This repo has no signer or release verifier yet.
