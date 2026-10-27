@@ -18,7 +18,7 @@ Build a modular IRC stack, independently distributable for portable Linux and ol
 | [rusti-adapter](crates/rusti-adapter/src/lib.rs) | Untrusted read-only IRC chat framing for future Rust Boy import; no Vault/peer privileges |
 | [rusti-testkit](crates/rusti-testkit/src/lib.rs) | Synthetic offline wire fixtures |
 | [standalone-cli](examples/standalone-cli/src/main.rs) | Offline smoke test only, prints fixture result |
-| [CI](.github/workflows/ci.yml) | Rust 1.70 and stable on Linux/macOS/Windows; ARM/musl cross-target source checks. CI results and hardware tests require verification |
+| [CI](.github/workflows/ci.yml) | [Run #15 passed 10/10 jobs](https://github.com/pskeffington/rusti_rc/actions/runs/40440406547): Rust 1.70/stable Linux/macOS/Windows tests; ARMv6/ARMv7/ARM64/musl source-only checks. Hardware/interoperability not validated |
 
 ## Local scaffold test
 
@@ -27,7 +27,7 @@ cargo test --workspace --all-targets
 cargo run -p rusti-standalone-cli
 ```
 
-These commands do **not** connect to IRC. No third-party crates are required for the portable workspace; the separate nightly fuzz harness alone has a dev-only `libfuzzer-sys` dependency. The minimum supported Rust toolchain **candidate** for the portable workspace is 1.70, with Rust 2021 edition; verify this in CI and on hardware before publishing a compatibility claim. Rust Boy's independently maintained workspace currently uses Rust 1.90.
+These commands do **not** connect to IRC. No third-party crates are required for the portable workspace; the separate nightly fuzz harness alone has a dev-only `libfuzzer-sys` dependency. The minimum Rust toolchain **candidate** for the portable workspace is 1.70, with Rust 2021 edition. Rust 1.70 CI passed on the tested host runners; hardware, OS ABI and field deployment claims remain unverified. Rust Boy's independently maintained workspace currently uses Rust 1.90.
 
 ## Research, security and integration documentation
 
