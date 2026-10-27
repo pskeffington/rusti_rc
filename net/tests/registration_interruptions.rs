@@ -80,7 +80,7 @@ fn lab(peer: Peer) -> (SocketAddr, RootCertStore, thread::JoinHandle<bool>) {
                 // An IRC server sending a slow, unfinished frame must not
                 // extend the client's absolute registration deadline.
                 for byte in b":irc CAP * LS :sasl=PLAIN" {
-                    if tls.write_all(&[*byte]).is_err() {
+                    if tls.write_all(&[*byte]).is_err() || tls.flush().is_err() {
                         break;
                     }
                     thread::sleep(Duration::from_millis(35));
