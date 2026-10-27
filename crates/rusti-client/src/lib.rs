@@ -1,6 +1,8 @@
 //! Rust IRC client policy boundary; no socket implementation in this scaffold.
 #![forbid(unsafe_code)]
 
+pub mod recovery;
+
 use std::net::IpAddr;
 
 pub use rusti_proto::FrameError;
