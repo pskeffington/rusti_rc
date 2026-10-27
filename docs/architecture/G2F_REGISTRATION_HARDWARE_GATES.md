@@ -1,6 +1,6 @@
 # G2f — Bounded registration, cancellation and legacy hardware deployment gates
 
-Status: **implementation in review**, 2026-10-27. Not approved for a deployed Rust Boy, medical transport, or authenticated Vault assignments.
+Status: **merged to main**, 2026-10-27, via [G2f PR #9](https://github.com/pskeffington/rusti_rc/pull/9), squash commit `2044f63f909debae2a722315138c8b77b7b535bc`. Tested PR head `25984a969711e70705240c5297dcc3d0f4fa3495` passed [portable 10/10](https://github.com/pskeffington/rusti_rc/actions/runs/40456201437), [locked TLS 3/3](https://github.com/pskeffington/rusti_rc/actions/runs/40456201424), and [independent Ergo 1/1](https://github.com/pskeffington/rusti_rc/actions/runs/40456201422). This is **not** approval for Rust Boy production, medical messaging, or Vault Command assignments.
 
 ## Source-backed engineering literature matrix
 
@@ -53,13 +53,22 @@ Do **not** parse the preflight as a release authorization. No Linux TPM device i
 
 ## G2f acceptance
 
-- [ ] Portable Rust 1.70/stable and cross-target source checks pass 10/10.
-- [ ] Locked Linux/macOS/Windows TLS and cancellation tests plus Clippy pass 3/3.
-- [ ] Digest-pinned independent Ergo ordinary IRC + real SASL account test remains green.
-- [ ] Test output and preflight script contain no account names, passwords, serial numbers or secrets.
+- [x] [Portable Rust 1.70/stable and ARM/musl source-only CI 10/10 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40456201437).
+- [x] [Locked Linux/macOS/Windows TLS CI 3/3 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40456201424), including 5 new SASL/CAP cancellation/slow-peer tests, Clippy and Linux offline preflight checks.
+- [x] [Digest-pinned independent Ergo IRC and synthetic registered-account SASL CI 1/1 passed](https://github.com/pskeffington/rusti_rc/actions/runs/40456201422).
+- [x] Preflight source and CI output schema reviewed for absence of user identifiers, serials or secret-store reads; test fixture continues to use only a deliberately public disposable account credential. This is **not an external security audit**.
 - [ ] Physical ARMv6/ARMv7/ARM64 host runs and real desktop OS keychain lifecycle evidence.
 - [ ] Real TPM2/external-secure-element provisioning, protected time and recovery on redeployed hardware.
 - [ ] Signed offline distributable with verified provenance, staged A/B recovery, reproducible toolchains, advisory/license SBOM and blocked rollback.
 - [ ] Rust Boy integration behind an explicit feature and independently verified Vault permission boundary.
 
 **Release classification:** G2f is a standalone network security and device-readiness development pass. No medical/emergency delivery assurances, RB-to-RB identity, E2EE, secure OS credential provisioning or deployment grant is implied.
+
+## Exact G2f CI evidence
+
+- Merge commit: `2044f63f909debae2a722315138c8b77b7b535bc`, [PR #9](https://github.com/pskeffington/rusti_rc/pull/9); tested head `25984a969711e70705240c5297dcc3d0f4fa3495`.
+- [Portable CI](https://github.com/pskeffington/rusti_rc/actions/runs/40456201437): 10/10 host + compile-only targets passed. This does not prove real ARM runtime.
+- [TLS CI](https://github.com/pskeffington/rusti_rc/actions/runs/40456201424): 3/3 Linux/macOS/Windows passed. Linux logs show 5/5 G2f interruption tests passed, plus read-only preflight output policy checks.
+- [Independent Ergo CI](https://github.com/pskeffington/rusti_rc/actions/runs/40456201422): 1/1 isolated digest-pinned server job, including existing ordinary IRC and disposable SASL account login.
+
+**Remaining acceptance boundary:** the cancellation latency guarantee is cooperative, not hard real-time, and OS native-store unlock operations remain synchronous. No physical ARM device was tested; no per-device hardware identity, TPM-backed credential, signed offline image, anti-rollback floor, OS keychain real lifecycle or Rust Boy authorization was provisioned.
