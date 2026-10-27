@@ -9,9 +9,9 @@
 #![forbid(unsafe_code)]
 
 pub mod cancel;
-pub mod operator;
 #[cfg(feature = "os-keyring")]
 pub mod native_store;
+pub mod operator;
 mod registration;
 mod sasl;
 
