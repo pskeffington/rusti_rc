@@ -1,0 +1,10 @@
+[package]
+name = "rusti-client"
+description = "Disabled-by-default IRC client policy and transport boundary"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+rusti-proto = { path = "../rusti-proto" }
