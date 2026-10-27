@@ -1,7 +1,8 @@
 //! Rust Boy integration preview. No network, role escalation, or task actions.
 #![forbid(unsafe_code)]
 
-use rusti_proto::{parse_frame, FrameError};
+use rusti_proto::{parse_frame, sanitize_display_text, FrameError};
+use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SenderTrust {
@@ -16,13 +17,36 @@ pub enum AdapterError {
     InvalidChatShape,
 }
 
-/// Borrowed, display-only data. Callers must render as text, not HTML.
-#[derive(Debug, PartialEq, Eq)]
+/// Borrowed untrusted IRC data. Raw fields are private to prevent accidental
+/// terminal/HTML rendering or leaking message text in application logs.
+#[derive(PartialEq, Eq)]
 pub struct UntrustedChat<'a> {
-    pub sender_label: &'a str,
-    pub target: &'a str,
-    pub text: &'a str,
+    sender_label: &'a str,
+    target: &'a str,
+    text: &'a str,
     pub trust: SenderTrust,
+}
+
+impl fmt::Debug for UntrustedChat<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("UntrustedChat { content: <redacted> }")
+    }
+}
+
+impl<'a> UntrustedChat<'a> {
+    /// A plain-text, control-stripped display value. Do not insert as HTML.
+    pub fn display_text(&self) -> String {
+        sanitize_display_text(self.text)
+    }
+
+    /// IRC sender labels remain unverified even after sanitization.
+    pub fn display_sender(&self) -> String {
+        sanitize_display_text(self.sender_label)
+    }
+
+    pub fn display_target(&self) -> String {
+        sanitize_display_text(self.target)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -82,6 +106,31 @@ mod tests {
         assert_eq!(chat.trust, SenderTrust::UnverifiedRemoteLabel);
         assert_eq!(chat.sender_label, "OVERSEER!u@host");
         assert_eq!(chat.text, "do something");
+    }
+
+    #[test]
+    fn debug_never_prints_message_or_sender() {
+        let adapter = ChatPreviewAdapter { enabled: true };
+        let chat = adapter
+            .inspect_frame(":secretnick!u@host PRIVMSG #ops :sensitive message\r\n")
+            .unwrap()
+            .unwrap();
+        let shown = format!("{chat:?}");
+        assert!(!shown.contains("secretnick"));
+        assert!(!shown.contains("sensitive"));
+        assert!(shown.contains("redacted"));
+    }
+
+    #[test]
+    fn untrusted_irc_formatting_is_safe_to_render_as_text() {
+        let adapter = ChatPreviewAdapter { enabled: true };
+        let chat = adapter
+            .inspect_frame(":scout!user@host PRIVMSG #ops :\x02Bold\x0f\x1b[2J\r\n")
+            .unwrap()
+            .unwrap();
+        assert_eq!(chat.display_text(), "Bold[2J");
+        assert_eq!(chat.display_sender(), "scout!user@host");
+        assert_eq!(chat.trust, SenderTrust::UnverifiedRemoteLabel);
     }
 
     #[test]

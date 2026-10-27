@@ -1,0 +1,105 @@
+name: Independent Ergo IRCd interoperability
+
+on:
+  pull_request:
+    paths:
+      - net/**
+      - crates/rusti-client/**
+      - crates/rusti-proto/**
+      - .github/workflows/ergo-interop.yml
+  push:
+    branches: [main]
+    paths:
+      - net/**
+      - crates/rusti-client/**
+      - crates/rusti-proto/**
+      - .github/workflows/ergo-interop.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rusti-ergo-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ircd-interoperability:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout source without persisting tokens
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Install stable Rust toolchain
+        shell: bash
+        run: rustup toolchain install stable --profile minimal
+
+      - name: Generate throwaway CA and localhost TLS leaf
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          lab_dir="$(mktemp -d "${RUNNER_TEMP}/rusti-ergo-XXXXXX")"
+          echo "RUSTI_ERGO_LAB_DIR=${lab_dir}" >> "${GITHUB_ENV}"
+          echo "RUSTI_ERGO_CA_DER=${lab_dir}/ca.der" >> "${GITHUB_ENV}"
+          echo "RUSTI_ERGO_ADDR=127.0.0.1:16697" >> "${GITHUB_ENV}"
+          openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 2             -keyout "${lab_dir}/ca.key" -out "${lab_dir}/ca.pem"             -subj "/CN=rusti-test-root.invalid"             -addext "basicConstraints=critical,CA:TRUE"             -addext "keyUsage=critical,keyCertSign,cRLSign"
+          openssl req -new -newkey rsa:2048 -nodes -sha256             -keyout "${lab_dir}/leaf.key" -out "${lab_dir}/leaf.csr"             -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost"
+          printf 'subjectAltName=DNS:localhost\nextendedKeyUsage=serverAuth\nkeyUsage=digitalSignature\n'             > "${lab_dir}/leaf.ext"
+          openssl x509 -req -in "${lab_dir}/leaf.csr"             -CA "${lab_dir}/ca.pem" -CAkey "${lab_dir}/ca.key"             -CAcreateserial -days 2 -sha256             -extfile "${lab_dir}/leaf.ext" -out "${lab_dir}/leaf.pem"
+          cat "${lab_dir}/leaf.pem" "${lab_dir}/ca.pem" > "${lab_dir}/fullchain.pem"
+          openssl x509 -in "${lab_dir}/ca.pem" -outform DER -out "${lab_dir}/ca.der"
+          # Lab-only private key, never a real account or organizational key.
+          # Ergo's container runs as a nonroot service account.
+          chmod 644 "${lab_dir}/leaf.key" "${lab_dir}/fullchain.pem"
+
+      - name: Start immutable-digest-pinned Ergo IRCd v2.19.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull ghcr.io/ergochat/ergo@sha256:ef885e44f7fa19101bbbc41baef11dc280dc8107465dccaf6f0860f41b48a682
+          docker image inspect ghcr.io/ergochat/ergo@sha256:ef885e44f7fa19101bbbc41baef11dc280dc8107465dccaf6f0860f41b48a682             --format 'Ergo image digest: {{index .RepoDigests 0}}'
+          docker run --init --name rusti-ergo -d             -p 127.0.0.1:16697:6697             ghcr.io/ergochat/ergo@sha256:ef885e44f7fa19101bbbc41baef11dc280dc8107465dccaf6f0860f41b48a682
+          for attempt in $(seq 1 30); do
+            if docker cp rusti-ergo:/ircd/ircd.yaml "${RUSTI_ERGO_LAB_DIR}/ircd.yaml" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          test -s "${RUSTI_ERGO_LAB_DIR}/ircd.yaml"
+          docker stop rusti-ergo >/dev/null
+          docker cp "${RUSTI_ERGO_LAB_DIR}/fullchain.pem" rusti-ergo:/ircd/fullchain.pem
+          docker cp "${RUSTI_ERGO_LAB_DIR}/leaf.key" rusti-ergo:/ircd/privkey.pem
+          docker start rusti-ergo >/dev/null
+          ready=0
+          for attempt in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/16697) >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "${ready}" -ne 1 ]; then
+            echo 'The local Ergo TLS port did not become ready' >&2
+            exit 1
+          fi
+
+      - name: Verify independent IRCd CAP registration and channel transfer
+        shell: bash
+        run: |
+          cargo +stable test --manifest-path net/Cargo.toml --locked             --test ergo_interop -- --ignored --nocapture
+
+      - name: Delete throwaway daemon, CA and client credentials
+        if: always()
+        shell: bash
+        run: |
+          docker rm -f rusti-ergo >/dev/null 2>&1 || true
+          if [ -n "${RUSTI_ERGO_LAB_DIR:-}" ]; then
+            rm -rf -- "${RUSTI_ERGO_LAB_DIR}"
+          fi
+
+  # This is third-party protocol interoperability, not a security audit.
+  # No live Internet IRC, account credentials or operational RB integration.
