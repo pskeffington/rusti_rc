@@ -57,16 +57,33 @@ impl<'a> ParsedMessage<'a> {
     }
 }
 
-fn unsafe_control(s: &str) -> bool {
-    s.chars().any(|c| {
-        c.is_control()
-            || matches!(
-                c,
-                '\u{200e}' | '\u{200f}' | '\u{202a}' | '\u{202b}' | '\u{202c}'
-                    | '\u{202d}' | '\u{202e}' | '\u{2066}' | '\u{2067}'
-                    | '\u{2068}' | '\u{2069}'
-            )
-    })
+fn bidi_control(c: char) -> bool {
+    matches!(
+        c,
+        '\u{200e}' | '\u{200f}' | '\u{202a}' | '\u{202b}' | '\u{202c}'
+            | '\u{202d}' | '\u{202e}' | '\u{2066}' | '\u{2067}'
+            | '\u{2068}' | '\u{2069}'
+    )
+}
+
+/// C0 controls (CTCP/mIRC formatting) can appear in IRC trailing text.
+/// Never treat them as trusted commands or pass them to a raw terminal.
+fn invalid_inbound_structure(s: &str) -> bool {
+    s.chars()
+        .any(|c| matches!(c, '\0' | '\r' | '\n') || bidi_control(c))
+}
+
+fn unsafe_outbound_text(s: &str) -> bool {
+    s.chars().any(|c| c.is_control() || bidi_control(c))
+}
+
+/// Escape-safe display normalization for untrusted IRC text fields.
+/// It strips C0/C1 controls and bidirectional overrides. A graphical UI
+/// must additionally render the result as text (never HTML markup).
+pub fn sanitize_display_text(text: &str) -> String {
+    text.chars()
+        .filter(|c| !c.is_control() && !bidi_control(*c))
+        .collect()
 }
 
 fn split_token(s: &str) -> (&str, &str) {
@@ -78,7 +95,8 @@ fn split_token(s: &str) -> (&str, &str) {
 
 /// Parse one complete CRLF-terminated UTF-8 IRC line, enforcing byte limits.
 ///
-/// This intentionally rejects CTCP control bytes and Unicode bidi controls.
+/// Raw CTCP/mIRC formatting may appear in trailing text; sanitize at render.
+/// Structural NUL/CR/LF and Unicode bidi control code points are forbidden.
 /// It supports opaque IRCv3 tag prefixes. Tag unescaping and limited CAP 302
 /// planning live in separate pure-data modules; no protocol field grants trust.
 pub fn parse_frame(frame: &str) -> Result<ParsedMessage<'_>, FrameError> {
@@ -89,7 +107,7 @@ pub fn parse_frame(frame: &str) -> Result<ParsedMessage<'_>, FrameError> {
     if line.is_empty() {
         return Err(FrameError::EmptyMessage);
     }
-    if unsafe_control(line) {
+    if invalid_inbound_structure(line) {
         return Err(FrameError::ForbiddenControl);
     }
     let mut rest = line;
@@ -100,6 +118,9 @@ pub fn parse_frame(frame: &str) -> Result<ParsedMessage<'_>, FrameError> {
             .ok_or(FrameError::MalformedTags)?;
         if tag_data.is_empty() {
             return Err(FrameError::MalformedTags);
+        }
+        if tag_data.chars().any(|c| c.is_control()) {
+            return Err(FrameError::ForbiddenControl);
         }
         if tag_data.len() + 2 > MAX_INBOUND_TAG_PREFIX_BYTES {
             return Err(FrameError::OverlongLine);
@@ -120,6 +141,9 @@ pub fn parse_frame(frame: &str) -> Result<ParsedMessage<'_>, FrameError> {
             .ok_or(FrameError::MalformedPrefix)?;
         if value.is_empty() {
             return Err(FrameError::MalformedPrefix);
+        }
+        if value.chars().any(|c| c.is_control()) {
+            return Err(FrameError::ForbiddenControl);
         }
         prefix = Some(value);
         rest = tail.trim_start_matches(' ');
@@ -145,6 +169,9 @@ pub fn parse_frame(frame: &str) -> Result<ParsedMessage<'_>, FrameError> {
         let (word, remainder) = split_token(tail);
         if word.is_empty() {
             break;
+        }
+        if word.chars().any(|c| c.is_control()) {
+            return Err(FrameError::ForbiddenControl);
         }
         params[count] = word;
         count += 1;
@@ -172,7 +199,7 @@ pub fn encode_privmsg(target: &str, text: &str) -> Result<String, FrameError> {
     if text.is_empty() {
         return Err(FrameError::EmptyText);
     }
-    if unsafe_control(text) {
+    if unsafe_outbound_text(text) {
         return Err(FrameError::ForbiddenControl);
     }
     let frame = format!("PRIVMSG {} :{}\r\n", target, text);
@@ -208,6 +235,41 @@ mod tests {
         assert_eq!(parse_frame(":bad\r\n"), Err(FrameError::MalformedPrefix));
         assert_eq!(parse_frame("TH!NG :x\r\n"), Err(FrameError::InvalidCommand));
         assert_eq!(parse_frame("PRIVMSG #a :\u{202e}spoof\r\n"), Err(FrameError::ForbiddenControl));
+    }
+
+    #[test]
+    fn permits_irc_formatted_trailing_text_but_sanitizes_before_display() {
+        let wire = ":irc 372 scout :\x02Welcome\x0f to \x03Ergo\r\n";
+        let parsed = parse_frame(wire).unwrap();
+        assert_eq!(parsed.command, "372");
+        assert_eq!(
+            sanitize_display_text(parsed.params()[1]),
+            "Welcome to Ergo"
+        );
+        assert_eq!(
+            encode_privmsg("#ops", parsed.params()[1]),
+            Err(FrameError::ForbiddenControl)
+        );
+    }
+
+    #[test]
+    fn rejects_controls_in_prefix_tags_and_middle_parameters() {
+        assert_eq!(
+            parse_frame(":a\x1bb PRIVMSG #ops :message\r\n"),
+            Err(FrameError::ForbiddenControl)
+        );
+        assert_eq!(
+            parse_frame("@time=\x02bad PRIVMSG #ops :message\r\n"),
+            Err(FrameError::ForbiddenControl)
+        );
+        assert_eq!(
+            parse_frame("PRIVMSG #o\x1fps :message\r\n"),
+            Err(FrameError::ForbiddenControl)
+        );
+        assert_eq!(
+            parse_frame("PRIVMSG #ops :bad\0data\r\n"),
+            Err(FrameError::ForbiddenControl)
+        );
     }
 
     #[test]
