@@ -13,6 +13,7 @@ Date: 2026-10-26. Status: **implementation under G2 PR; not a production network
 | Bounded app framing | 1 KiB per-call plaintext reads into existing FrameDecoder with max 8703-byte frame budget | Flood/latency/hardware memory tests |
 | Untrusted chat state | Restricted encoders, no SASL, IRC nick remains untrusted, writes are `SubmittedUnconfirmed` | Independent security and Rust Boy integration review |
 | Legacy compatibility | Root protocol Rust 1.70 preserved; TLS workspace modern | ARMv6/ARMv7, old Linux, macOS/Windows real tests |
+| Locked dependencies | Cargo-generated net/Cargo.lock committed with 66 packages; CI configured for --locked | Independent CVE/license/SBOM review pending |
 | Offline redeployment | No installer or versioned, signed trust-root bundle added | G6 signed release and rollback drills |
 
 Source basis: [rustls 0.23](https://docs.rs/rustls/0.23.46/rustls/), [webpki-roots 1.0.9](https://docs.rs/webpki-roots/1.0.9/webpki_roots/), [RFC 9325](https://www.rfc-editor.org/rfc/rfc9325), [RFC 9525](https://www.rfc-editor.org/rfc/rfc9525), [rcgen 0.14.10](https://docs.rs/rcgen/0.14.10/rcgen/).
