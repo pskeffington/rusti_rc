@@ -51,4 +51,4 @@ These commands do **not** connect to IRC. No third-party crates are required for
 - Modern Windows target support starts with Windows 10 / Server 2016; EOL hosts require a separately reviewed isolation strategy.
 - A ported IRC client is not a protected medical, emergency or mission-critical communications system without independent security assessment.
 
-**Licensing decision pending.** This repository does not currently include a license grant; `publish = false` is set for each crate. Before code redistribution, select a compatible license, review upstream notices and record approval.
+**License: [MIT](LICENSE).** Cargo packages inherit `MIT` from the workspace. Publication remains disabled (`publish = false`) until interoperability, vulnerability review, and distribution security gates pass. Attribution and license compatibility are required for imported third-party code.
