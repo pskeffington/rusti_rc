@@ -198,7 +198,10 @@ mod tests {
     #[test]
     fn empty_message_preview_is_safe() {
         let adapter = ChatPreviewAdapter { enabled: true };
-        let chat = adapter.inspect_frame(":scout PRIVMSG #ops :\\r\\n").unwrap().unwrap();
+        let chat = adapter
+            .inspect_frame(":scout PRIVMSG #ops :\\r\\n")
+            .unwrap()
+            .unwrap();
         assert_eq!(chat.display_text_bounded(10), "");
     }
 
