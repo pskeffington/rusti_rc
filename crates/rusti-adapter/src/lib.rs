@@ -583,7 +583,9 @@ mod micro_gui_tests {
         let view = MicroGui::default();
         let draws = view.paint_text();
         assert!(!draws.is_empty());
-        assert!(draws.iter().all(|cmd| cmd.x < VIEW_WIDTH && cmd.y < VIEW_HEIGHT));
+        assert!(draws
+            .iter()
+            .all(|cmd| cmd.x < VIEW_WIDTH && cmd.y < VIEW_HEIGHT));
         assert!(draws.iter().all(|cmd| cmd.text.chars().count() <= WIDTH));
         assert!(!format!("{:?}", draws[0]).contains("DISABLED"));
     }
