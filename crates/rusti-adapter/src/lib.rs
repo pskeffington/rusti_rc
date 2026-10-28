@@ -242,6 +242,10 @@ pub mod micro_gui {
     }
 
     impl Rect {
+        pub const fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
+            Self { x, y, width, height }
+        }
+
         pub fn contains(self, x: u16, y: u16) -> bool {
             x >= self.x
                 && y >= self.y
@@ -264,14 +268,26 @@ pub mod micro_gui {
     impl Layout {
         pub const fn reference() -> Self {
             Self {
-                header: Rect { x: 0, y: 0, width: 320, height: 32 },
-                content: Rect { x: 8, y: 36, width: 304, height: 156 },
-                footer: Rect { x: 0, y: 196, width: 320, height: 44 },
-                previous: Rect { x: 0, y: 196, width: 80, height: 44 },
-                next: Rect { x: 80, y: 196, width: 80, height: 44 },
-                older: Rect { x: 160, y: 196, width: 80, height: 44 },
-                newer: Rect { x: 240, y: 196, width: 80, height: 44 },
+                header: Rect::new(0, 0, 320, 32),
+                content: Rect::new(8, 36, 304, 156),
+                footer: Rect::new(0, 196, 320, 44),
+                previous: Rect::new(0, 196, 80, 44),
+                next: Rect::new(80, 196, 80, 44),
+                older: Rect::new(160, 196, 80, 44),
+                newer: Rect::new(240, 196, 80, 44),
             }
+        }
+
+        /// Host-side painting uses these regions; no graphics backend is imported.
+        pub fn text_origin(self, row: usize) -> Option<(u16, u16)> {
+            if row >= 7 {
+                return None;
+            }
+            let y = 48_u16.saturating_add((row as u16) * 21);
+            if y >= self.content.y.saturating_add(self.content.height) {
+                return None;
+            }
+            Some((self.content.x.saturating_add(4), y))
         }
 
         /// Touch hit testing returns local navigation input only.
@@ -519,6 +535,16 @@ mod micro_gui_tests {
         assert_eq!(layout.hit_test_scaled(639, 479, 640, 480), Some(Key::Down));
         assert_eq!(layout.hit_test_scaled(0, 0, 0, 480), None);
         assert_eq!(layout.hit_test_scaled(640, 0, 640, 480), None);
+    }
+
+    #[test]
+    fn text_origins_stay_inside_content_region() {
+        let layout = Layout::reference();
+        for row in 0..7 {
+            let (x, y) = layout.text_origin(row).unwrap();
+            assert!(layout.content.contains(x, y));
+        }
+        assert_eq!(layout.text_origin(7), None);
     }
 
     #[test]
