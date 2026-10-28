@@ -14,6 +14,13 @@ pub enum SenderTrust {
     UnverifiedRemoteLabel,
 }
 
+/// Wire command class is informational only; neither class grants authority.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChatKind {
+    Message,
+    Notice,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AdapterError {
     Disabled,
@@ -29,6 +36,7 @@ pub struct UntrustedChat<'a> {
     target: &'a str,
     text: &'a str,
     pub trust: SenderTrust,
+    pub kind: ChatKind,
 }
 
 impl fmt::Debug for UntrustedChat<'_> {
@@ -51,6 +59,11 @@ impl<'a> UntrustedChat<'a> {
     pub fn display_target(&self) -> String {
         sanitize_display_text(self.target)
     }
+
+    /// Display-only command type. A NOTICE is not a verified system alert.
+    pub fn kind(&self) -> ChatKind {
+        self.kind
+    }
 }
 
 #[derive(Debug, Default)]
@@ -70,11 +83,13 @@ impl ChatPreviewAdapter {
             return Err(AdapterError::Disabled);
         }
         let frame = parse_frame(wire).map_err(AdapterError::InvalidFrame)?;
-        if !frame.command.eq_ignore_ascii_case("PRIVMSG")
-            && !frame.command.eq_ignore_ascii_case("NOTICE")
-        {
+        let kind = if frame.command.eq_ignore_ascii_case("PRIVMSG") {
+            ChatKind::Message
+        } else if frame.command.eq_ignore_ascii_case("NOTICE") {
+            ChatKind::Notice
+        } else {
             return Ok(None);
-        }
+        };
         let fields = frame.params();
         if fields.len() != 2 || fields[0].is_empty() {
             return Err(AdapterError::InvalidChatShape);
@@ -84,6 +99,7 @@ impl ChatPreviewAdapter {
             target: fields[0],
             text: fields[1],
             trust: SenderTrust::UnverifiedRemoteLabel,
+            kind,
         }))
     }
 }
@@ -135,6 +151,24 @@ mod tests {
         assert_eq!(chat.display_text(), "Bold[2J");
         assert_eq!(chat.display_sender(), "scout!user@host");
         assert_eq!(chat.trust, SenderTrust::UnverifiedRemoteLabel);
+    }
+
+    #[test]
+    fn notice_cannot_masquerade_as_verified_system_alert() {
+        let adapter = ChatPreviewAdapter { enabled: true };
+        let notice = adapter
+            .inspect_frame(":server NOTICE #ops :URGENT maintenance\\r\\n")
+            .unwrap()
+            .unwrap();
+        assert_eq!(notice.kind(), ChatKind::Notice);
+        assert_eq!(notice.trust, SenderTrust::UnverifiedRemoteLabel);
+        assert_eq!(notice.display_sender(), "server");
+        let message = adapter
+            .inspect_frame(":scout PRIVMSG #ops :hello\\r\\n")
+            .unwrap()
+            .unwrap();
+        assert_eq!(message.kind(), ChatKind::Message);
+        assert_eq!(message.trust, SenderTrust::UnverifiedRemoteLabel);
     }
 
     #[test]
