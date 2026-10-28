@@ -55,7 +55,10 @@ impl<'a> UntrustedChat<'a> {
     /// A zero budget deliberately yields an empty preview.
     /// The limit controls display size, not authorization or wire framing.
     pub fn display_text_bounded(&self, max_chars: usize) -> String {
-        sanitize_display_text(self.text).chars().take(max_chars).collect()
+        sanitize_display_text(self.text)
+            .chars()
+            .take(max_chars)
+            .collect()
     }
 
     /// IRC sender labels remain unverified even after sanitization.
