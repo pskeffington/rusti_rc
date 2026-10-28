@@ -51,6 +51,13 @@ impl<'a> UntrustedChat<'a> {
         sanitize_display_text(self.text)
     }
 
+    /// Sanitize first, then cap by Unicode scalar values without splitting UTF-8.
+    /// A zero budget deliberately yields an empty preview.
+    /// The limit controls display size, not authorization or wire framing.
+    pub fn display_text_bounded(&self, max_chars: usize) -> String {
+        sanitize_display_text(self.text).chars().take(max_chars).collect()
+    }
+
     /// IRC sender labels remain unverified even after sanitization.
     pub fn display_sender(&self) -> String {
         sanitize_display_text(self.sender_label)
@@ -169,6 +176,27 @@ mod tests {
             .unwrap();
         assert_eq!(message.kind(), ChatKind::Message);
         assert_eq!(message.trust, SenderTrust::UnverifiedRemoteLabel);
+    }
+
+    #[test]
+    fn preview_is_bounded_after_control_stripping() {
+        let adapter = ChatPreviewAdapter { enabled: true };
+        let chat = adapter
+            .inspect_frame(":scout PRIVMSG #ops :\\x02Aé🚀BC\\x0f\\r\\n")
+            .unwrap()
+            .unwrap();
+        assert_eq!(chat.display_text_bounded(0), "");
+        assert_eq!(chat.display_text_bounded(1), "A");
+        assert_eq!(chat.display_text_bounded(3), "Aé🚀");
+        assert_eq!(chat.display_text_bounded(99), "Aé🚀BC");
+        assert_eq!(chat.trust, SenderTrust::UnverifiedRemoteLabel);
+    }
+
+    #[test]
+    fn empty_message_preview_is_safe() {
+        let adapter = ChatPreviewAdapter { enabled: true };
+        let chat = adapter.inspect_frame(":scout PRIVMSG #ops :\\r\\n").unwrap().unwrap();
+        assert_eq!(chat.display_text_bounded(10), "");
     }
 
     #[test]
