@@ -229,6 +229,88 @@ pub mod micro_gui {
         Down,
     }
 
+    /// Reference viewport. The host scales coordinates into its actual display.
+    pub const VIEW_WIDTH: u16 = 320;
+    pub const VIEW_HEIGHT: u16 = 240;
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct Rect {
+        pub x: u16,
+        pub y: u16,
+        pub width: u16,
+        pub height: u16,
+    }
+
+    impl Rect {
+        pub fn contains(self, x: u16, y: u16) -> bool {
+            x >= self.x
+                && y >= self.y
+                && x < self.x.saturating_add(self.width)
+                && y < self.y.saturating_add(self.height)
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub struct Layout {
+        pub header: Rect,
+        pub content: Rect,
+        pub footer: Rect,
+        pub previous: Rect,
+        pub next: Rect,
+        pub older: Rect,
+        pub newer: Rect,
+    }
+
+    impl Layout {
+        pub const fn reference() -> Self {
+            Self {
+                header: Rect { x: 0, y: 0, width: 320, height: 32 },
+                content: Rect { x: 8, y: 36, width: 304, height: 156 },
+                footer: Rect { x: 0, y: 196, width: 320, height: 44 },
+                previous: Rect { x: 0, y: 196, width: 80, height: 44 },
+                next: Rect { x: 80, y: 196, width: 80, height: 44 },
+                older: Rect { x: 160, y: 196, width: 80, height: 44 },
+                newer: Rect { x: 240, y: 196, width: 80, height: 44 },
+            }
+        }
+
+        /// Touch hit testing returns local navigation input only.
+        pub fn hit_test(self, x: u16, y: u16) -> Option<Key> {
+            if self.previous.contains(x, y) {
+                Some(Key::Left)
+            } else if self.next.contains(x, y) {
+                Some(Key::Right)
+            } else if self.older.contains(x, y) {
+                Some(Key::Up)
+            } else if self.newer.contains(x, y) {
+                Some(Key::Down)
+            } else {
+                None
+            }
+        }
+
+        /// Integer coordinate scaling avoids floats and external dependencies.
+        /// Returns None for zero-size displays and out-of-bounds input.
+        pub fn hit_test_scaled(
+            self,
+            x: u32,
+            y: u32,
+            display_width: u32,
+            display_height: u32,
+        ) -> Option<Key> {
+            if display_width == 0
+                || display_height == 0
+                || x >= display_width
+                || y >= display_height
+            {
+                return None;
+            }
+            let sx = (u64::from(x) * u64::from(VIEW_WIDTH)) / u64::from(display_width);
+            let sy = (u64::from(y) * u64::from(VIEW_HEIGHT)) / u64::from(display_height);
+            self.hit_test(sx as u16, sy as u16)
+        }
+    }
+
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum Page {
         Chat,
@@ -423,6 +505,20 @@ mod micro_gui_tests {
         view.on_key(Key::Left);
         assert_eq!(view.page, Page::Chat);
         assert!(!format!("{:?}", view.visible()[0]).contains("Hello"));
+    }
+
+    #[test]
+    fn touch_regions_are_bounded_and_scaled() {
+        let layout = Layout::reference();
+        assert_eq!(layout.hit_test(0, 196), Some(Key::Left));
+        assert_eq!(layout.hit_test(80, 239), Some(Key::Right));
+        assert_eq!(layout.hit_test(160, 200), Some(Key::Up));
+        assert_eq!(layout.hit_test(319, 239), Some(Key::Down));
+        assert_eq!(layout.hit_test(319, 240), None);
+        assert_eq!(layout.hit_test_scaled(0, 392, 640, 480), Some(Key::Left));
+        assert_eq!(layout.hit_test_scaled(639, 479, 640, 480), Some(Key::Down));
+        assert_eq!(layout.hit_test_scaled(0, 0, 0, 480), None);
+        assert_eq!(layout.hit_test_scaled(640, 0, 640, 480), None);
     }
 
     #[test]
