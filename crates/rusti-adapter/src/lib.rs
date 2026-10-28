@@ -378,6 +378,21 @@ pub mod micro_gui {
         value.chars().take(max).collect()
     }
 
+    /// One plain-text draw operation, sized for the reference viewport.
+    /// This is not HTML or a terminal control sequence.
+    #[derive(Clone, PartialEq, Eq)]
+    pub struct TextDraw {
+        pub x: u16,
+        pub y: u16,
+        pub text: String,
+    }
+
+    impl std::fmt::Debug for TextDraw {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("TextDraw { content: <redacted> }")
+        }
+    }
+
     pub struct MicroGui {
         pub page: Page,
         pub link: LinkState,
@@ -450,6 +465,27 @@ pub mod micro_gui {
             let end = self.events.len().saturating_sub(self.scroll);
             let start = end.saturating_sub(MESSAGE_ROWS);
             self.events.iter().skip(start).take(end - start).collect()
+        }
+
+        /// Backend-neutral commands for a text painter; never interpret text as HTML.
+        pub fn paint_text(&self) -> Vec<TextDraw> {
+            let layout = Layout::reference();
+            let rows = self.rows();
+            let footer_index = rows.len().saturating_sub(1);
+            let mut draws = Vec::with_capacity(rows.len());
+            for (index, text) in rows.into_iter().enumerate() {
+                let position = if index == 0 {
+                    Some((8, 21))
+                } else if index == footer_index {
+                    Some((8, 222))
+                } else {
+                    layout.text_origin(index.saturating_sub(1))
+                };
+                if let Some((x, y)) = position {
+                    draws.push(TextDraw { x, y, text });
+                }
+            }
+            draws
         }
 
         /// Fully bounded plain-text viewport; host must render as text, never HTML.
@@ -540,6 +576,16 @@ mod micro_gui_tests {
         assert_eq!(layout.hit_test_scaled(639, 479, 640, 480), Some(Key::Down));
         assert_eq!(layout.hit_test_scaled(0, 0, 0, 480), None);
         assert_eq!(layout.hit_test_scaled(640, 0, 640, 480), None);
+    }
+
+    #[test]
+    fn paint_commands_are_screen_bounded_and_redacted_in_debug() {
+        let view = MicroGui::default();
+        let draws = view.paint_text();
+        assert!(!draws.is_empty());
+        assert!(draws.iter().all(|cmd| cmd.x < VIEW_WIDTH && cmd.y < VIEW_HEIGHT));
+        assert!(draws.iter().all(|cmd| cmd.text.chars().count() <= WIDTH));
+        assert!(!format!("{:?}", draws[0]).contains("DISABLED"));
     }
 
     #[test]
