@@ -211,3 +211,209 @@ mod tests {
         assert_eq!(adapter.inspect_frame("OPER operator secret\r\n"), Ok(None));
     }
 }
+
+    
+/// Fixed-capacity, read-only micro-screen view model for Rust Boy LINK.
+/// This is a host-renderable interface, not a networked or interactive IRC client.
+pub mod micro_gui {
+    use super::{ChatKind, UntrustedChat};
+
+    pub const WIDTH: usize = 32;
+    pub const MESSAGE_ROWS: usize = 5;
+    pub const MAX_EVENTS: usize = 16;
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum Page {
+        Chat,
+        Channels,
+        Status,
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum LinkState {
+        Disabled,
+        Disconnected,
+        Connecting,
+        Connected,
+        Error,
+    }
+
+    impl LinkState {
+        pub fn label(self) -> &'static str {
+            match self {
+                Self::Disabled => "DISABLED",
+                Self::Disconnected => "OFFLINE",
+                Self::Connecting => "CONNECTING",
+                Self::Connected => "CONNECTED",
+                Self::Error => "ERROR",
+            }
+        }
+    }
+
+    /// Safe text only. Sender is never an authenticated user identity.
+    #[derive(Clone, PartialEq, Eq)]
+    pub struct Preview {
+        pub sender: String,
+        pub text: String,
+        pub kind: ChatKind,
+    }
+
+    impl std::fmt::Debug for Preview {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("Preview { content: <redacted> }")
+        }
+    }
+
+    fn clipped(value: &str, max: usize) -> String {
+        value.chars().take(max).collect()
+    }
+
+    pub struct MicroGui {
+        pub page: Page,
+        pub link: LinkState,
+        events: std::collections::VecDeque<Preview>,
+        scroll: usize,
+    }
+
+    impl Default for MicroGui {
+        fn default() -> Self {
+            Self {
+                page: Page::Chat,
+                link: LinkState::Disabled,
+                events: std::collections::VecDeque::new(),
+                scroll: 0,
+            }
+        }
+    }
+
+    impl MicroGui {
+        /// Only accepts data already parsed and sanitized through the adapter.
+        pub fn append(&mut self, chat: &UntrustedChat<'_>) {
+            let preview = Preview {
+                sender: clipped(&chat.display_sender(), 12),
+                text: chat.display_text_bounded(WIDTH),
+                kind: chat.kind(),
+            };
+            if self.events.len() == MAX_EVENTS {
+                self.events.pop_front();
+            }
+            self.events.push_back(preview);
+            self.scroll = 0;
+        }
+
+        pub fn next_page(&mut self) {
+            self.page = match self.page {
+                Page::Chat => Page::Channels,
+                Page::Channels => Page::Status,
+                Page::Status => Page::Chat,
+            };
+        }
+
+        pub fn previous_page(&mut self) {
+            self.page = match self.page {
+                Page::Chat => Page::Status,
+                Page::Channels => Page::Chat,
+                Page::Status => Page::Channels,
+            };
+        }
+
+        pub fn scroll_older(&mut self) {
+            self.scroll = (self.scroll + 1).min(self.events.len().saturating_sub(MESSAGE_ROWS));
+        }
+
+        pub fn scroll_newer(&mut self) {
+            self.scroll = self.scroll.saturating_sub(1);
+        }
+
+        pub fn visible(&self) -> Vec<&Preview> {
+            let end = self.events.len().saturating_sub(self.scroll);
+            let start = end.saturating_sub(MESSAGE_ROWS);
+            self.events.iter().skip(start).take(end - start).collect()
+        }
+
+        /// Fully bounded plain-text viewport; host must render as text, never HTML.
+        /// No fabricated channel list, delivery receipt, or operator identity.
+        pub fn rows(&self) -> Vec<String> {
+            let mut lines = vec![format!("IRC / LINK | {}", self.link.label())];
+            let page_name = match self.page {
+                Page::Chat => "CHAT",
+                Page::Channels => "CHANNELS",
+                Page::Status => "STATUS",
+            };
+            lines.push(format!("< {} >", page_name));
+            match self.page {
+                Page::Chat => {
+                    for msg in self.visible() {
+                        let prefix = if msg.kind == ChatKind::Notice { "!" } else { ">" };
+                        lines.push(format!("{} {}", prefix, clipped(&msg.sender, 12)));
+                        lines.push(clipped(&msg.text, WIDTH));
+                    }
+                    if self.events.is_empty() {
+                        lines.push("No local preview messages".into());
+                    }
+                }
+                Page::Channels => {
+                    lines.push("No verified channel state".into());
+                }
+                Page::Status => {
+                    lines.push("Unverified IRC identities".into());
+                    lines.push("Read-only preview".into());
+                    lines.push("No command authorization".into());
+                }
+            }
+            lines.push("PREV  NEXT  UP  DOWN".into());
+            lines.into_iter().map(|line| clipped(&line, WIDTH)).collect()
+        }
+    }
+}
+
+#[cfg(test)]
+mod micro_gui_tests {
+    use super::micro_gui::*;
+    use super::*;
+
+    #[test]
+    fn disabled_empty_view_is_read_only() {
+        let view = MicroGui::default();
+        assert_eq!(view.link, LinkState::Disabled);
+        assert!(view.rows().iter().any(|x| x.contains("DISABLED")));
+        assert_eq!(view.visible().len(), 0);
+    }
+
+    #[test]
+    fn navigation_and_bounded_preview() {
+        let adapter = ChatPreviewAdapter { enabled: true };
+        let chat = adapter
+            .inspect_frame(":scout PRIVMSG #ops :Hello micro screen\\r\\n")
+            .unwrap()
+            .unwrap();
+        let mut view = MicroGui::default();
+        view.append(&chat);
+        assert_eq!(view.visible()[0].sender, "scout");
+        assert!(view.rows().iter().all(|line| line.chars().count() <= WIDTH));
+        view.next_page();
+        assert_eq!(view.page, Page::Channels);
+        view.previous_page();
+        assert_eq!(view.page, Page::Chat);
+        assert!(!format!("{:?}", view.visible()[0]).contains("Hello"));
+    }
+
+    #[test]
+    fn message_history_is_capped() {
+        let adapter = ChatPreviewAdapter { enabled: true };
+        let chat = adapter
+            .inspect_frame(":scout NOTICE #ops :fixture\\r\\n")
+            .unwrap()
+            .unwrap();
+        let mut view = MicroGui::default();
+        for _ in 0..(MAX_EVENTS + 3) {
+            view.append(&chat);
+        }
+        assert_eq!(view.visible().len(), MESSAGE_ROWS);
+        for _ in 0..100 {
+            view.scroll_older();
+        }
+        assert_eq!(view.visible().len(), MESSAGE_ROWS);
+        assert_eq!(view.visible()[0].kind, ChatKind::Notice);
+    }
+}
