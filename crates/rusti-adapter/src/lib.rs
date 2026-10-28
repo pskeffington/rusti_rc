@@ -345,8 +345,7 @@ pub mod micro_gui {
                 Page::Chat => {
                     for msg in self.visible() {
                         let prefix = if msg.kind == ChatKind::Notice { "!" } else { ">" };
-                        lines.push(format!("{} {}", prefix, clipped(&msg.sender, 12)));
-                        lines.push(clipped(&msg.text, WIDTH));
+                        lines.push(clipped(&format!("{}{}: {}", prefix, msg.sender, msg.text), WIDTH));
                     }
                     if self.events.is_empty() {
                         lines.push("No local preview messages".into());
@@ -384,7 +383,7 @@ mod micro_gui_tests {
     fn navigation_and_bounded_preview() {
         let adapter = ChatPreviewAdapter { enabled: true };
         let chat = adapter
-            .inspect_frame(":scout PRIVMSG #ops :Hello micro screen\\r\\n")
+            .inspect_frame(":scout PRIVMSG #ops :Hello micro screen\r\n")
             .unwrap()
             .unwrap();
         let mut view = MicroGui::default();
@@ -402,7 +401,7 @@ mod micro_gui_tests {
     fn message_history_is_capped() {
         let adapter = ChatPreviewAdapter { enabled: true };
         let chat = adapter
-            .inspect_frame(":scout NOTICE #ops :fixture\\r\\n")
+            .inspect_frame(":scout NOTICE #ops :fixture\r\n")
             .unwrap()
             .unwrap();
         let mut view = MicroGui::default();
