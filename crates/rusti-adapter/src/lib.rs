@@ -212,7 +212,6 @@ mod tests {
     }
 }
 
-    
 /// Fixed-capacity, read-only micro-screen view model for Rust Boy LINK.
 /// This is a host-renderable interface, not a networked or interactive IRC client.
 pub mod micro_gui {
@@ -221,6 +220,14 @@ pub mod micro_gui {
     pub const WIDTH: usize = 32;
     pub const MESSAGE_ROWS: usize = 5;
     pub const MAX_EVENTS: usize = 16;
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum Key {
+        Left,
+        Right,
+        Up,
+        Down,
+    }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum Page {
@@ -301,6 +308,17 @@ pub mod micro_gui {
             self.scroll = 0;
         }
 
+        /// Navigation is local and never emits network commands.
+        pub fn on_key(&mut self, key: Key) {
+            match key {
+                Key::Left => self.previous_page(),
+                Key::Right => self.next_page(),
+                Key::Up if self.page == Page::Chat => self.scroll_older(),
+                Key::Down if self.page == Page::Chat => self.scroll_newer(),
+                _ => {}
+            }
+        }
+
         pub fn next_page(&mut self) {
             self.page = match self.page {
                 Page::Chat => Page::Channels,
@@ -344,8 +362,15 @@ pub mod micro_gui {
             match self.page {
                 Page::Chat => {
                     for msg in self.visible() {
-                        let prefix = if msg.kind == ChatKind::Notice { "!" } else { ">" };
-                        lines.push(clipped(&format!("{}{}: {}", prefix, msg.sender, msg.text), WIDTH));
+                        let prefix = if msg.kind == ChatKind::Notice {
+                            "!"
+                        } else {
+                            ">"
+                        };
+                        lines.push(clipped(
+                            &format!("{}{}: {}", prefix, msg.sender, msg.text),
+                            WIDTH,
+                        ));
                     }
                     if self.events.is_empty() {
                         lines.push("No local preview messages".into());
@@ -361,7 +386,10 @@ pub mod micro_gui {
                 }
             }
             lines.push("PREV  NEXT  UP  DOWN".into());
-            lines.into_iter().map(|line| clipped(&line, WIDTH)).collect()
+            lines
+                .into_iter()
+                .map(|line| clipped(&line, WIDTH))
+                .collect()
         }
     }
 }
@@ -390,11 +418,24 @@ mod micro_gui_tests {
         view.append(&chat);
         assert_eq!(view.visible()[0].sender, "scout");
         assert!(view.rows().iter().all(|line| line.chars().count() <= WIDTH));
-        view.next_page();
+        view.on_key(Key::Right);
         assert_eq!(view.page, Page::Channels);
-        view.previous_page();
+        view.on_key(Key::Left);
         assert_eq!(view.page, Page::Chat);
         assert!(!format!("{:?}", view.visible()[0]).contains("Hello"));
+    }
+
+    #[test]
+    fn directional_input_remains_inert_for_network() {
+        let mut view = MicroGui::default();
+        view.on_key(Key::Left);
+        assert_eq!(view.page, Page::Status);
+        view.on_key(Key::Right);
+        assert_eq!(view.page, Page::Chat);
+        view.on_key(Key::Up);
+        view.on_key(Key::Down);
+        assert!(view.visible().is_empty());
+        assert_eq!(view.link, LinkState::Disabled);
     }
 
     #[test]
