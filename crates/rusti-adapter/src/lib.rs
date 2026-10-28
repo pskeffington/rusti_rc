@@ -167,14 +167,14 @@ mod tests {
     fn notice_cannot_masquerade_as_verified_system_alert() {
         let adapter = ChatPreviewAdapter { enabled: true };
         let notice = adapter
-            .inspect_frame(":server NOTICE #ops :URGENT maintenance\\r\\n")
+            .inspect_frame(":server NOTICE #ops :URGENT maintenance\r\n")
             .unwrap()
             .unwrap();
         assert_eq!(notice.kind(), ChatKind::Notice);
         assert_eq!(notice.trust, SenderTrust::UnverifiedRemoteLabel);
         assert_eq!(notice.display_sender(), "server");
         let message = adapter
-            .inspect_frame(":scout PRIVMSG #ops :hello\\r\\n")
+            .inspect_frame(":scout PRIVMSG #ops :hello\r\n")
             .unwrap()
             .unwrap();
         assert_eq!(message.kind(), ChatKind::Message);
@@ -185,7 +185,7 @@ mod tests {
     fn preview_is_bounded_after_control_stripping() {
         let adapter = ChatPreviewAdapter { enabled: true };
         let chat = adapter
-            .inspect_frame(":scout PRIVMSG #ops :\\x02Aé🚀BC\\x0f\\r\\n")
+            .inspect_frame(":scout PRIVMSG #ops :\x02Aé🚀BC\x0f\r\n")
             .unwrap()
             .unwrap();
         assert_eq!(chat.display_text_bounded(0), "");
