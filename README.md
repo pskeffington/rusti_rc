@@ -1,5 +1,9 @@
 # rusti_rc
 
+[![Build](https://github.com/pskeffington/rusti_rc/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/pskeffington/rusti_rc/actions/workflows/ci.yml)
+
+Build evidence: [successful CI run 40467437460](https://github.com/pskeffington/rusti_rc/actions/runs/40467437460) at `f2ec44a`. Runtime and release acceptance remain separate.
+
 **Rust-native IRC protocol research and security-gated communications adapter for [Rust Boy](https://github.com/pskeffington/pip_boy).**
 
 **Current state (2026-10-27): Rust 1.70 portable IRC core plus an isolated opt-in verified-TLS client, IRCv3 SASL PLAIN and optional desktop OS credential adapter.** Importing the portable root crates starts no sockets. The modern net/ crate requires a caller-requested TLS connection and explicit IRC/SASL registration. macOS Keychain and Windows Credential Manager support is feature-gated; Linux headless credential storage is not implemented. G2f adds bounded cancellable registration and an offline legacy host preflight, **not** a hardware credential store. There is no automatic discovery, persistent chat, LAN server, production release signer/installer or Rust Boy import. G2g-A has a **laboratory-only** detached-signature verifier that never deploys. **Not a deployable field communications system.**
