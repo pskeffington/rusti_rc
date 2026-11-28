@@ -9,10 +9,12 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use rcgen::{date_time_ymd, CertificateParams, KeyPair};
+use rusti_client::outbox::{OperatorOutbox, OutboxError};
 use rusti_client::ClientConfig;
 use rusti_proto::cap::CapError;
 use rusti_proto::registration::RegistrationError;
-use rusti_transport_tls::{Submission, Timeouts, TlsIrcSession, TransportError};
+use rusti_transport_tls::operator::{OperatorSendError, OperatorSendOutcome};
+use rusti_transport_tls::{Receive, Submission, Timeouts, TlsIrcSession, TransportError};
 use rustls::pki_types::PrivatePkcs8KeyDer;
 use rustls::{RootCertStore, ServerConfig, ServerConnection, StreamOwned};
 
@@ -21,6 +23,7 @@ enum Script {
     Happy,
     MissingRequired,
     NoCapLegacy,
+    DropAfterWelcome,
     PrematureWelcome,
     Revoke,
     Expired,
@@ -179,6 +182,11 @@ fn start_server(script: Script) -> (SocketAddr, RootCertStore, JoinHandle<Vec<St
             return observed;
         }
 
+        if matches!(script, Script::DropAfterWelcome) {
+            // Abrupt server-side loss before an operator can transmit.
+            return observed;
+        }
+
         if matches!(script, Script::Revoke) {
             let Some(join) = read_line(&mut tls) else {
                 return observed;
@@ -258,6 +266,88 @@ fn full_cap_and_welcome_then_join_and_channel_text() {
             "PRIVMSG #lab :hello\r\n",
         ]
     );
+}
+
+#[test]
+fn operator_outbox_sends_only_after_fresh_confirmation_on_registered_tls() {
+    let (addr, trust, server) = start_server(Script::Happy);
+    let mut client = connect(addr, trust);
+    client
+        .register_with_capabilities(
+            "tester",
+            "tester",
+            &["message-tags"],
+            &["server-time"],
+            Duration::from_secs(4),
+        )
+        .unwrap();
+
+    let mut outbox = OperatorOutbox::default();
+    let draft_id = outbox.queue_draft("#lab", "g3b confirmed").unwrap();
+    assert!(matches!(
+        client.operator_submit_next(&mut outbox, false),
+        Err(OperatorSendError::Outbox(
+            OutboxError::OperatorConfirmationRequired
+        ))
+    ));
+    assert_eq!(outbox.len(), 1);
+    client.join("#lab").unwrap();
+
+    let result = client.operator_submit_next(&mut outbox, true).unwrap();
+    assert_eq!(
+        result,
+        OperatorSendOutcome::SubmittedUnconfirmed { draft_id }
+    );
+    assert!(outbox.is_empty());
+    assert_eq!(
+        server.join().unwrap(),
+        vec![
+            "CAP LS 302\r\n",
+            "NICK tester\r\n",
+            "USER tester 0 * :rusti_rc\r\n",
+            "CAP REQ :message-tags server-time\r\n",
+            "CAP END\r\n",
+            "JOIN #lab\r\n",
+            "PRIVMSG #lab :g3b confirmed\r\n",
+        ]
+    );
+}
+
+#[test]
+fn server_disconnect_clears_unsent_operator_drafts() {
+    let (addr, trust, server) = start_server(Script::DropAfterWelcome);
+    let mut client = connect(addr, trust);
+    client
+        .register_with_capabilities(
+            "tester",
+            "tester",
+            &["message-tags"],
+            &["server-time"],
+            Duration::from_secs(4),
+        )
+        .unwrap();
+    assert!(client.is_registered());
+
+    let mut outbox = OperatorOutbox::default();
+    outbox.queue_draft("#lab", "do not replay").unwrap();
+    let mut disconnected = false;
+    for _ in 0..6 {
+        match client.operator_read_once(&mut outbox, |_| {}) {
+            Ok(Receive::Closed) | Err(_) => {
+                disconnected = true;
+                break;
+            }
+            Ok(Receive::Data(_) | Receive::TimedOut) => {}
+        }
+    }
+    assert!(disconnected, "server close must end the operator session");
+    assert!(!client.is_registered());
+    assert!(outbox.is_empty());
+    assert!(matches!(
+        client.operator_submit_next(&mut outbox, true),
+        Err(OperatorSendError::Disconnected)
+    ));
+    assert_eq!(server.join().unwrap().len(), 5);
 }
 
 #[test]

@@ -30,8 +30,10 @@ See [PACE](https://github.com/pskeffington/pip_boy/blob/main/docs/PACE_MESSAGING
 G0 standalone parser, adapter and lab fixtures; no host modifications — **scaffolded**.
 G1 standalone TLS-backed IRC client, IRCv3 CAP/SASL and independent synthetic-account Ergo interoperability — **validated in standalone tests; Rust Boy import not implemented**.
 G2 verified-TLS localhost rejection tests and certificate-bound credentials — **partially tested**; independent audits, OS keychain lifecycle and real Linux/ARM smoke **pending**.
-G3 optional `pipboy` crate dependency + read-only LINK fixture integration — **pending**.
+G3 standalone G3a/G3b bounded operator drafts and verified-TLS one-at-a-time submission — **authored in rusti_rc only**. Feature-gated `pipboy` import and read-only LINK fixture integration — **pending**.
 G4 explicit network send UI, bounded connection state, real interoperable server and desktop/micro screen tests — **pending**.
 G5 signed dual-target offline redeploy and security review — **pending**.
+
+The G3b standalone API is `TlsIrcSession::operator_submit_next`; it is synchronous and must run on an explicitly authorized worker, never automatically from rendering, route selection, reconnect, or incoming IRC text. It does not authenticate an organizational sender or produce receiver receipts.
 
 A successful import needs a CI test asserting `--no-default-features` starts Rust Boy with zero additional sockets, routes, listeners, token reads or changes to existing message schemas. **Do not merge the import merely because code compiles.**

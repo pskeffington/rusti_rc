@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 
 pub mod credential_ref;
+pub mod outbox;
 pub mod recovery;
 
 use std::net::IpAddr;

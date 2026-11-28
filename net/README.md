@@ -23,6 +23,16 @@ cargo +1.70.0 test --workspace --all-targets
 
 The first run needs crates.io access to obtain the approved dependencies. The Cargo-generated **`net/Cargo.lock` is committed** with 87 resolved packages from the GitHub Ubuntu test job, and CI now uses `--locked`. This pins dependency resolution, but a complete SBOM, security advisory/license audit, release signature, and offline vendor bundle have **not** been produced.
 
+## G3b operator-send boundary (development preview)
+
+The portable `rusti_client::outbox::OperatorOutbox` contains bounded in-memory drafts (default 16 messages, 8 KiB of encoded IRC data), validated with the same PRIVMSG encoder as the transport. Import is inert and no draft is persisted.
+
+`TlsIrcSession::operator_submit_next(&mut outbox, operator_confirmed)` permits **one** FIFO draft only when the actual IRC session is registered and the caller has obtained fresh explicit user confirmation. A successful TLS write yields `OperatorSendOutcome::SubmittedUnconfirmed`, not delivery to a recipient. A write error yields `OperatorSendError::OutcomeUnknown`, closes the socket, and discards all other drafts; it **never** retries a possibly accepted message.
+
+Call `operator_read_once(&mut outbox, callback)` when monitoring an active operator session: EOF, malformed server frames, lost capabilities and TLS read errors terminate the session and discard unsubmitted drafts. `operator_disconnect(&mut outbox)` provides explicit teardown. Do not call blocking TLS I/O on the desktop/handheld render thread, keep messages out of logs, and do not treat an IRC nickname or account as a Vault Command identity. This is not persistent offline chat or a safe emergency messaging channel.
+
+Tests: `cargo test --manifest-path net/Cargo.toml --all-targets --locked` exercises simulated send failure, denied confirmation, queue drain, a real localhost verified-TLS submission, and server disconnect. Physical host and second IRCd validation remain necessary.
+
 ## Legacy OS / ARM policy
 
 The root parser stays Rust 1.70. This TLS crate is currently evaluated with modern Rust (declared minimum 1.85; actual dependency MSRV and old OS ABI still require testing). The `ring` provider must be validated separately on ARMv6/ARMv7, musl and older Linux kernels; an ARM cross-check or source compilation alone does not prove functionality. Under no circumstance disable TLS name verification merely to reach an old server.
